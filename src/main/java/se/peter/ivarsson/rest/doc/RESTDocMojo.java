@@ -15,8 +15,8 @@ import org.apache.maven.plugin.MojoExecutionException;
  * Maven goal which create REST documentetion.
  *
  * @author Peter Ivarsson     Peter.Ivarsson@cybercom.com
- * @goal   rest-doc
- * @phase  process-classes
+ * @goal   restdoc
+ * @aggregator
  */
 public class RESTDocMojo extends AbstractMojo {
 
