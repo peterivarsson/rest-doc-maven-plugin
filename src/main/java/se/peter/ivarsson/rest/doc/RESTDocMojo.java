@@ -23,7 +23,7 @@ public class RESTDocMojo extends AbstractMojo {
     /**
      * File path where to find the classses files ( a src directory )
      * 
-     * @parameter property="file.path.for.classes"
+     * @parameter property="classesDirectory"
      * @required
      * @readonly
      */
@@ -32,7 +32,7 @@ public class RESTDocMojo extends AbstractMojo {
     /**
      * File path where to put the HTML output files
      * 
-     * @parameter property="file.path.for.html.output.directory"
+     * @parameter property="outputDirectory"
      * @required
      * @readonly
      */
@@ -42,19 +42,24 @@ public class RESTDocMojo extends AbstractMojo {
     @Override
     public void execute() throws MojoExecutionException {
 
-        // avoid execution if output directory does not exist
-        if( ! classesDirectory.exists() || ! classesDirectory.isDirectory() ) {
-           
-            getLog().info( "Can't find classes directory: " + classesDirectory );
-            return;
-        }
+      getLog().info( "\nExecuting RESTDocMojo maven plugin\n" );
 
-        // avoid execution if output directory does not exist
-        if( ! outputDirectory.exists() || ! outputDirectory.isDirectory() ) {
+      // avoid execution if output directory does not exist
+      if( ! classesDirectory.exists() || ! classesDirectory.isDirectory() ) {
            
-            getLog().info( "Can't find output directory: " + outputDirectory );
-            return;
-        }
+         String error = "Can't find classes directory: " + classesDirectory;
+         throw new MojoExecutionException( error );
+      }
+
+      // avoid execution if output directory does not exist
+      if( ! outputDirectory.exists() || ! outputDirectory.isDirectory() ) {
+           
+         String error = "Can't find output directory: " + outputDirectory;
+         throw new MojoExecutionException( error );
+      }
+
+      RestDocHandler restDocHandler = new RestDocHandler( classesDirectory, outputDirectory, this );
+      
 
     }
    

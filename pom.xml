@@ -9,6 +9,12 @@
 
     <dependencies>
         <dependency>
+            <groupId>se.peter.ivarsson.rest.doc</groupId>
+            <artifactId>rest-doc-types</artifactId>
+            <version>1.0</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-plugin-api</artifactId>
             <version>3.3.3</version>
@@ -17,6 +23,13 @@
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-core</artifactId>
+            <version>3.3.3</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-compat</artifactId>
             <version>3.3.3</version>
             <scope>provided</scope>
         </dependency>
@@ -29,10 +42,9 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.maven</groupId>
-            <artifactId>maven-compat</artifactId>
-            <version>3.3.3</version>
-            <scope>provided</scope>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
+            <version>2.0.1</version>
         </dependency>
 
     </dependencies>
@@ -44,9 +56,9 @@
                 <artifactId>rest-doc-maven-plugin</artifactId>
                 <version>${project.version}</version>
                 <configuration>
-                     Specify the RESTDoc parameters 
-                    <outputDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-maven-plugin/htmlDir</outputDirectory>
+                    <!-- Specify the RESTDoc parameters -->
                     <classesDirectory>/Users/piv/Documents/NetBeansProjects/sfbio-mobilebackend/target/classes</classesDirectory>
+                    <outputDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-maven-plugin/htmlDir</outputDirectory>
                 </configuration>
 
                 <executions>
@@ -56,6 +68,12 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-plugin-plugin</artifactId>
+                <version>3.3</version>
             </plugin>
         </plugins>
     </build>
