@@ -30,6 +30,15 @@ public class RESTDocMojo extends AbstractMojo {
     private File classesDirectory;
 
     /**
+     * File path to Jar or War file
+     * 
+     * @parameter property="analyzeJar"
+     * @required
+     * @readonly
+     */
+    private File analyzeJar;
+
+    /**
      * File path where to put the HTML output files
      * 
      * @parameter property="outputDirectory"

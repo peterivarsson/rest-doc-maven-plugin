@@ -6,6 +6,7 @@
 
 package se.peter.ivarsson.rest.doc;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -15,7 +16,7 @@ import java.util.List;
  */
 public class RestInfo {
    
-   private List<ClassInfo>                 classInfo;
+   private List<ClassInfo>                 classInfo     = new ArrayList<>();
    private HashMap<String, DataModelInfo>  domainDataMap = new HashMap<>();
 
    public List<ClassInfo> getClassInfo() {
