@@ -1,9 +1,8 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Rest Documentation maven plugin.
+ *
+ * Copyright (C) 2017 Peter Ivarsson
  */
-
 package se.peter.ivarsson.rest.doc;
 
 /**
@@ -11,33 +10,37 @@ package se.peter.ivarsson.rest.doc;
  * @author Peter Ivarsson Peter.Ivarsson@cybercom.com
  */
 public class ParameterInfo {
-   
-   private String parameterAnnotationName;
-   private String parameterClassName;
-   private String parameterType;
 
-   public String getParameterAnnotationName() {
-      return parameterAnnotationName;
-   }
+    private String parameterAnnotationName;
+    private String parameterClassName;
+    private String parameterType;
 
-   public void setParameterAnnotationName( String parameterAnnotationName ) {
-      this.parameterAnnotationName = parameterAnnotationName;
-   }
+    public String getParameterAnnotationName() {
+        return parameterAnnotationName;
+    }
 
-   public String getParameterClassName() {
-      return parameterClassName;
-   }
+    public void setParameterAnnotationName(String parameterAnnotationName) {
+        this.parameterAnnotationName = parameterAnnotationName;
+    }
 
-   public void setParameterClassName( String parameterClassName ) {
-      this.parameterClassName = parameterClassName;
-   }
+    public String getParameterClassName() {
+        return parameterClassName;
+    }
 
-   public String getParameterType() {
-      return parameterType;
-   }
+    public void setParameterClassName(String parameterClassName) {
+        this.parameterClassName = parameterClassName;
+    }
 
-   public void setParameterType( String parameterType ) {
-      this.parameterType = parameterType;
-   }
+    public String getParameterType() {
+        return parameterType;
+    }
 
+    public void setParameterType(String parameterType) {
+        this.parameterType = parameterType;
+    }
+
+    @Override
+    public String toString() {
+        return "ParameterInfo{" + "parameterAnnotationName=" + parameterAnnotationName + ", parameterClassName=" + parameterClassName + ", parameterType=" + parameterType + '}';
+    }
 }

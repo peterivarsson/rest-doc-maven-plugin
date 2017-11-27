@@ -1,9 +1,8 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Rest Documentation maven plugin.
+ *
+ * Copyright (C) 2017 Peter Ivarsson
  */
-
 package se.peter.ivarsson.rest.doc;
 
 import java.util.ArrayList;
@@ -15,24 +14,28 @@ import java.util.List;
  * @author Peter Ivarsson Peter.Ivarsson@cybercom.com
  */
 public class RestInfo {
-   
-   private List<ClassInfo>                 classInfo     = new ArrayList<>();
-   private HashMap<String, DataModelInfo>  domainDataMap = new HashMap<>();
 
-   public List<ClassInfo> getClassInfo() {
-      return classInfo;
-   }
+    private List<ClassInfo> classInfo = new ArrayList<>();
+    private HashMap<String, DataModelInfo> domainDataMap = new HashMap<>();
 
-   public void setClassInfo( List<ClassInfo> classInfo ) {
-      this.classInfo = classInfo;
-   }
+    public List<ClassInfo> getClassInfo() {
+        return classInfo;
+    }
 
-   public HashMap<String, DataModelInfo> getDomainDataMap() {
-      return domainDataMap;
-   }
+    public void setClassInfo(List<ClassInfo> classInfo) {
+        this.classInfo = classInfo;
+    }
 
-   public void setDomainDataMap( HashMap<String, DataModelInfo> domainDataMap ) {
-      this.domainDataMap = domainDataMap;
-   }
+    public HashMap<String, DataModelInfo> getDomainDataMap() {
+        return domainDataMap;
+    }
 
+    public void setDomainDataMap(HashMap<String, DataModelInfo> domainDataMap) {
+        this.domainDataMap = domainDataMap;
+    }
+
+    @Override
+    public String toString() {
+        return "RestInfo{" + "classInfo=" + classInfo + ", domainDataMap=" + domainDataMap + '}';
+    }
 }

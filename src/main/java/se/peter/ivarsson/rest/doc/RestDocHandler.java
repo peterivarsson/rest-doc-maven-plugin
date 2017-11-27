@@ -1,7 +1,7 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Rest Documentation maven plugin.
+ *
+ * Copyright (C) 2017 Peter Ivarsson
  */
 package se.peter.ivarsson.rest.doc;
 
@@ -36,9 +36,9 @@ public class RestDocHandler {
     /**
      *
      */
-    RestDocHandler(File classesDirectory, File outputDirectory, RESTDocMojo restDocMojo) {
+    RestDocHandler(File classesDirectory, File outputDirectory, Log log) {
 
-        logger = restDocMojo.getLog();
+        this.logger = log;
 
         ClassLoader currentThreadClassLoader = Thread.currentThread().getContextClassLoader();
 
@@ -61,7 +61,10 @@ public class RestDocHandler {
 
                         logger.info("path: " + path);
 
-                        checkClassFilesForPathAnnotations(path);
+                        if (path.endsWith(".class")) {
+
+                            checkClassFilesForPathAnnotations(path);
+                        }
                     });
         } catch (IOException ioe) {
 
@@ -70,6 +73,8 @@ public class RestDocHandler {
             ioe.printStackTrace();
         }
 
+        //TODO remove
+        logger.info(restInfo.toString());
     }
 
     private void checkClassFilesForPathAnnotations(Path classNamePath) {
@@ -102,6 +107,7 @@ public class RestDocHandler {
             }
 
 //BUG in get Methods     checkClassMethodsForPathInformation( classInfo, clazz );
+            checkClassMethodsForPathInformation( classInfo, clazz );
 
         } catch (ClassNotFoundException cnfe) {
 

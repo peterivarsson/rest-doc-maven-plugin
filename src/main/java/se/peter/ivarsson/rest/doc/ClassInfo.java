@@ -1,9 +1,8 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Rest Documentation maven plugin.
+ *
+ * Copyright (C) 2017 Peter Ivarsson
  */
-
 package se.peter.ivarsson.rest.doc;
 
 import java.util.List;
@@ -13,41 +12,46 @@ import java.util.List;
  * @author Peter Ivarsson Peter.Ivarsson@cybercom.com
  */
 public class ClassInfo {
-   
-   private String className;
-   private String packageAndClassName;
-   private String classRootPath;
-   private List<MethodInfo> methodInfo;
 
-   public String getClassName() {
-      return className;
-   }
+    private String className;
+    private String packageAndClassName;
+    private String classRootPath;
+    private List<MethodInfo> methodInfo;
 
-   public void setClassName( String className ) {
-      this.className = className;
-   }
+    public String getClassName() {
+        return className;
+    }
 
-   public String getPackageAndClassName() {
-      return packageAndClassName;
-   }
+    public void setClassName(String className) {
+        this.className = className;
+    }
 
-   public void setPackageAndClassName( String packageAndClassName ) {
-      this.packageAndClassName = packageAndClassName;
-   }
+    public String getPackageAndClassName() {
+        return packageAndClassName;
+    }
 
-   public String getClassRootPath() {
-      return classRootPath;
-   }
+    public void setPackageAndClassName(String packageAndClassName) {
+        this.packageAndClassName = packageAndClassName;
+    }
 
-   public void setClassRootPath( String classRootPath ) {
-      this.classRootPath = classRootPath;
-   }
+    public String getClassRootPath() {
+        return classRootPath;
+    }
 
-   public List<MethodInfo> getMethodInfo() {
-      return methodInfo;
-   }
+    public void setClassRootPath(String classRootPath) {
+        this.classRootPath = classRootPath;
+    }
 
-   public void setMethodInfo( List<MethodInfo> methodInfo ) {
-      this.methodInfo = methodInfo;
-   }
+    public List<MethodInfo> getMethodInfo() {
+        return methodInfo;
+    }
+
+    public void setMethodInfo(List<MethodInfo> methodInfo) {
+        this.methodInfo = methodInfo;
+    }
+
+    @Override
+    public String toString() {
+        return "ClassInfo{" + "className=" + className + ", packageAndClassName=" + packageAndClassName + ", classRootPath=" + classRootPath + ", methodInfo=" + methodInfo + '}';
+    }
 }

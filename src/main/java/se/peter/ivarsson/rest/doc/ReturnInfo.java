@@ -1,9 +1,8 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Rest Documentation maven plugin.
+ *
+ * Copyright (C) 2017 Peter Ivarsson
  */
-
 package se.peter.ivarsson.rest.doc;
 
 /**
@@ -11,24 +10,28 @@ package se.peter.ivarsson.rest.doc;
  * @author Peter Ivarsson Peter.Ivarsson@cybercom.com
  */
 public class ReturnInfo {
-   
-   private String returnClassName;
-   private String annotatedReturnType;
 
-   public String getReturnClassName() {
-      return returnClassName;
-   }
+    private String returnClassName;
+    private String annotatedReturnType;
 
-   public void setReturnClassName( String returnClassName ) {
-      this.returnClassName = returnClassName;
-   }
+    public String getReturnClassName() {
+        return returnClassName;
+    }
 
-   public String getAnnotatedReturnType() {
-      return annotatedReturnType;
-   }
+    public void setReturnClassName(String returnClassName) {
+        this.returnClassName = returnClassName;
+    }
 
-   public void setAnnotatedReturnType( String annotatedReturnType ) {
-      this.annotatedReturnType = annotatedReturnType;
-   }
+    public String getAnnotatedReturnType() {
+        return annotatedReturnType;
+    }
 
+    public void setAnnotatedReturnType(String annotatedReturnType) {
+        this.annotatedReturnType = annotatedReturnType;
+    }
+
+    @Override
+    public String toString() {
+        return "ReturnInfo{" + "returnClassName=" + returnClassName + ", annotatedReturnType=" + annotatedReturnType + '}';
+    }
 }
