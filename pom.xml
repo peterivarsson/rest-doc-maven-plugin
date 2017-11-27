@@ -5,7 +5,7 @@
     <artifactId>rest-doc-maven-plugin</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>maven-plugin</packaging>
-    <name>REST documentation Maven Plugin 2017-11-25</name>
+    <name>REST documentation Maven Plugin</name>
 
     <dependencies>
         <dependency>
