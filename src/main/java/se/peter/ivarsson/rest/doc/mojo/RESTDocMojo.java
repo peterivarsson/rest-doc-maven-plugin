@@ -3,12 +3,14 @@
  *
  * Copyright (C) 2017 Peter Ivarsson
  */
-package se.peter.ivarsson.rest.doc;
+package se.peter.ivarsson.rest.doc.mojo;
 
 import java.io.File;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
+import se.peter.ivarsson.rest.doc.parser.RestDocHandler;
+import se.peter.ivarsson.rest.doc.parser.RestInfo;
 
 /**
  * Maven goal which create REST documentetion.
@@ -29,15 +31,6 @@ public class RESTDocMojo extends AbstractMojo {
     private File classesDirectory;
 
     /**
-     * File path to Jar or War file
-     *
-     * @parameter property="analyzeJar"
-     * @required
-     * @readonly
-     */
-    private File analyzeJar;
-
-    /**
      * File path where to put the HTML output files
      *
      * @parameter property="outputDirectory"
@@ -49,7 +42,7 @@ public class RESTDocMojo extends AbstractMojo {
     @Override
     public void execute() throws MojoExecutionException {
 
-        getLog().info("\nExecuting RESTDocMojo maven plugin\n");
+        getLog().info("\nRESTDocMojo maven plugin STARTED executing\n");
 
         // avoid execution if output directory does not exist
         if (!classesDirectory.exists() || !classesDirectory.isDirectory()) {
@@ -65,8 +58,9 @@ public class RESTDocMojo extends AbstractMojo {
             throw new MojoExecutionException(error);
         }
 
-        RestDocHandler restDocHandler = new RestDocHandler(classesDirectory, outputDirectory, getLog());
+        RestDocHandler restDocHandler = new RestDocHandler(classesDirectory, outputDirectory);
 
+        getLog().info("\nRESTDocMojo maven plugin FINISHED executing\n");
     }
 
 }

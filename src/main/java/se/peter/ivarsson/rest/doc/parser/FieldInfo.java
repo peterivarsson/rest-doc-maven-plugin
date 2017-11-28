@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2017 Peter Ivarsson
  */
-package se.peter.ivarsson.rest.doc;
+package se.peter.ivarsson.rest.doc.parser;
 
 /**
  *
@@ -41,6 +41,6 @@ public class FieldInfo {
 
     @Override
     public String toString() {
-        return "FieldInfo{" + "fieldName=" + fieldName + ", fieldType=" + fieldType + ", listOfType=" + listOfType + '}';
+        return " FieldInfo{" + "\n         fieldName=" + fieldName + ",\n         fieldType=" + fieldType + ",\n         listOfType=" + listOfType + "\n      }";
     }
 }

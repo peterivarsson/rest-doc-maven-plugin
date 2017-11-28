@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2017 Peter Ivarsson
  */
-package se.peter.ivarsson.rest.doc;
+package se.peter.ivarsson.rest.doc.parser;
 
 /**
  *
@@ -41,6 +41,6 @@ public class ParameterInfo {
 
     @Override
     public String toString() {
-        return "ParameterInfo{" + "parameterAnnotationName=" + parameterAnnotationName + ", parameterClassName=" + parameterClassName + ", parameterType=" + parameterType + '}';
+        return " ParameterInfo{" + "\n            parameterAnnotationName=" + parameterAnnotationName + ",\n            parameterClassName=" + parameterClassName + ",\n            parameterType=" + parameterType + "\n         }";
     }
 }

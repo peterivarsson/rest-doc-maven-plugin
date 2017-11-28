@@ -57,8 +57,8 @@
                 <version>${project.version}</version>
                 <configuration>
                     <!-- Specify the RESTDoc parameters -->
-                    <classesDirectory>/Users/piv/Documents/NetBeansProjects/ncg/mobilebackend-api/target/classes</classesDirectory>
-                    <outputDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-maven-plugin/htmlDir</outputDirectory>
+                    <classesDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-test-mobilebackend-api/target/classes</classesDirectory>
+                    <outputDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-output-directory</outputDirectory>
                 </configuration>
 
                 <executions>

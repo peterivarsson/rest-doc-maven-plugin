@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2017 Peter Ivarsson
  */
-package se.peter.ivarsson.rest.doc;
+package se.peter.ivarsson.rest.doc.parser;
 
 import java.util.List;
 
@@ -52,6 +52,6 @@ public class ClassInfo {
 
     @Override
     public String toString() {
-        return "ClassInfo{" + "className=" + className + ", packageAndClassName=" + packageAndClassName + ", classRootPath=" + classRootPath + ", methodInfo=" + methodInfo + '}';
+        return "\n   ClassInfo{" + "\n      className=" + className + ",\n      packageAndClassName=" + packageAndClassName + ",\n      classRootPath=" + classRootPath + ",\n      methodInfo=" + methodInfo + "\n   }";
     }
 }

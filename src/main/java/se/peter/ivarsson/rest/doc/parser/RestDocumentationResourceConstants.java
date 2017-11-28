@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2017 Peter Ivarsson
  */
-package se.peter.ivarsson.rest.doc;
+package se.peter.ivarsson.rest.doc.parser;
 
 /**
  *

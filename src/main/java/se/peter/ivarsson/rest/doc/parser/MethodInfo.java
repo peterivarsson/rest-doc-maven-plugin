@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2017 Peter Ivarsson
  */
-package se.peter.ivarsson.rest.doc;
+package se.peter.ivarsson.rest.doc.parser;
 
 import java.util.List;
 
@@ -87,6 +87,6 @@ public class MethodInfo {
 
     @Override
     public String toString() {
-        return "MethodInfo{" + "methodName=" + methodName + ", restPath=" + restPath + ", httpRequestType=" + httpRequestType + ", produceType=" + produceType + ", consumeType=" + consumeType + ", returnInfo=" + returnInfo + ", parameterInfo=" + parameterInfo + '}';
+        return " MethodInfo{" + "\n         methodName=" + methodName + ",\n         restPath=" + restPath + ",\n         httpRequestType=" + httpRequestType + ",\n         produceType=" + produceType + ",\n         consumeType=" + consumeType + ",\n         returnInfo=" + returnInfo + ",\n         parameterInfo=" + parameterInfo + "\n      }";
     }
 }

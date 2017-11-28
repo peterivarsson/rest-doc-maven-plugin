@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2017 Peter Ivarsson
  */
-package se.peter.ivarsson.rest.doc;
+package se.peter.ivarsson.rest.doc.parser;
 
 /**
  *
@@ -32,6 +32,6 @@ public class ReturnInfo {
 
     @Override
     public String toString() {
-        return "ReturnInfo{" + "returnClassName=" + returnClassName + ", annotatedReturnType=" + annotatedReturnType + '}';
+        return " ReturnInfo{" + "\n            returnClassName=" + returnClassName + ",\n            annotatedReturnType=" + annotatedReturnType + "\n         }";
     }
 }

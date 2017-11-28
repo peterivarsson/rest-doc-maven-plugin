@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2017 Peter Ivarsson
  */
-package se.peter.ivarsson.rest.doc;
+package se.peter.ivarsson.rest.doc.parser;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,8 +18,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.maven.plugin.logging.Log;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 /**
  *
@@ -29,28 +30,27 @@ public class RestDocHandler {
 
     private URLClassLoader urlClassLoader;
 
-    private Log logger;
+    private static final Logger LOGGER = Logger.getLogger( RestDocHandler.class.getName() );
 
     public static RestInfo restInfo = new RestInfo();
 
     /**
      *
      */
-    RestDocHandler(File classesDirectory, File outputDirectory, Log log) {
-
-        this.logger = log;
+    public RestDocHandler(File classesDirectory, File outputDirectory) {
+        
+        init(outputDirectory);
 
         ClassLoader currentThreadClassLoader = Thread.currentThread().getContextClassLoader();
 
         try {
-
+            
             // Add the classesDirectory dir to the classpath
             urlClassLoader = new URLClassLoader(new URL[]{classesDirectory.toURI().toURL()}, currentThreadClassLoader);
 
         } catch (MalformedURLException mue) {
 
-            logger.error("MalformedURLException: " + mue.getMessage());
-            return;
+            LOGGER.severe("MalformedURLException: " + mue.getMessage());
         }
 
         try {
@@ -59,27 +59,27 @@ public class RestDocHandler {
                     .filter(Files::isRegularFile)
                     .forEach((path) -> {
 
-                        logger.info("path: " + path);
+                        LOGGER.info("path: " + path);
 
-                        if (path.endsWith(".class")) {
+                        if (path.toString().endsWith(".class")) {
 
                             checkClassFilesForPathAnnotations(path);
                         }
                     });
         } catch (IOException ioe) {
 
-            logger.error("IOException reading war file: " + ioe.getMessage());
+            LOGGER.severe("IOException reading war file: " + ioe.getMessage());
 
             ioe.printStackTrace();
         }
 
-        //TODO remove
-        logger.info(restInfo.toString());
+        LOGGER.info(restInfo.toString());
+
     }
 
     private void checkClassFilesForPathAnnotations(Path classNamePath) {
 
-        logger.info("Class file: " + classNamePath.getFileName().toString());
+        LOGGER.info("Class file: " + classNamePath.getFileName().toString());
 
         ClassInfo classInfo = getFullClassName(classNamePath);
 
@@ -106,12 +106,15 @@ public class RestDocHandler {
                 }
             }
 
-//BUG in get Methods     checkClassMethodsForPathInformation( classInfo, clazz );
             checkClassMethodsForPathInformation( classInfo, clazz );
 
         } catch (ClassNotFoundException cnfe) {
 
-            logger.error("checkClassFilesForPathAnnotations, ClassNotFoundException: " + cnfe.getMessage());
+            LOGGER.severe("checkClassFilesForPathAnnotations, ClassNotFoundException: " + cnfe.getMessage());
+
+        } catch (NoClassDefFoundError ncdfe) {
+
+            LOGGER.severe("checkClassFilesForPathAnnotations, NoClassDefFoundError: " + ncdfe.getMessage());
 
         }
     }
@@ -183,20 +186,26 @@ public class RestDocHandler {
 
     private void checkClassMethodsForPathInformation(ClassInfo classInfo, Class clazz) {
 
-        Method[] methods = clazz.getDeclaredMethods();
+        try {
+            
+            Method[] methods = clazz.getDeclaredMethods();
 
-        for (Method method : methods) {
+            for (Method method : methods) {
 
-            Annotation[] methodAnnotations = method.getAnnotations();
+                Annotation[] methodAnnotations = method.getAnnotations();
 
-            for (Annotation annotation : methodAnnotations) {
+                for (Annotation annotation : methodAnnotations) {
 
-                if (annotation instanceof javax.ws.rs.Path) {
+                    if (annotation instanceof javax.ws.rs.Path) {
 
-                    // We found a method with Path annotation
-                    addMethodInfoToRestInfoList(classInfo, (javax.ws.rs.Path) annotation, method);
+                        // We found a method with Path annotation
+                        addMethodInfoToRestInfoList(classInfo, (javax.ws.rs.Path) annotation, method);
+                    }
                 }
             }
+        } catch(Exception cnfe) {
+            
+            LOGGER.info(cnfe.getMessage());
         }
     }
 
@@ -248,13 +257,13 @@ public class RestDocHandler {
         StringBuilder consumeTypes = new StringBuilder();
         boolean firstConsumeType = true;
 
-        logger.info("Method: " + method.toGenericString());
+        LOGGER.info("Method: " + method.toGenericString());
 
         Annotation[] methodAnnotations = method.getAnnotations();
 
         for (Annotation annotation : methodAnnotations) {
 
-            logger.info("Method Annotation: " + annotation.annotationType().toGenericString());
+            LOGGER.info("Method Annotation: " + annotation.annotationType().toGenericString());
 
             if (annotation instanceof javax.ws.rs.GET) {
 
@@ -304,6 +313,7 @@ public class RestDocHandler {
                 }
 
                 methodInfo.setConsumeType(consumeTypes.toString());
+
             } else if (annotation instanceof se.peter.ivarsson.rest.doc.rest.type.DocReturnType) {
 
                 se.peter.ivarsson.rest.doc.rest.type.DocReturnType returnType = (se.peter.ivarsson.rest.doc.rest.type.DocReturnType) annotation;
@@ -337,7 +347,7 @@ public class RestDocHandler {
 
         try {
 
-            Class clazz = Class.forName(className);
+            Class clazz = urlClassLoader.loadClass(className);
 
             DataModelInfo dataModelInfo = new DataModelInfo();
 
@@ -387,7 +397,7 @@ public class RestDocHandler {
             }
         } catch (ClassNotFoundException cnfe) {
 
-            logger.error("addDomainDataInfo, ClassNotFoundException: " + cnfe.getMessage());
+            LOGGER.severe("addDomainDataInfo, ClassNotFoundException: " + cnfe.getMessage());
         }
     }
 
@@ -501,7 +511,7 @@ public class RestDocHandler {
 
                 addDomainDataInfo(parameter.getType().getName());
 
-                logger.info("Parameter without annotation: " + parameter.getName() + " Type: " + parameter.getType().getName());
+                LOGGER.info("Parameter without annotation: " + parameter.getName() + " Type: " + parameter.getType().getName());
             }
         }
     }
@@ -517,5 +527,27 @@ public class RestDocHandler {
         }
 
         return !method.getReturnType().equals(void.class);
+    }
+    
+    private void init(File outputDirectory) {
+        
+        try {
+
+            String logFilePath = outputDirectory.getAbsolutePath() + "/RestDoc.log";
+    
+            int maxSizeOfTheLogFile = 500_000;
+            int maxNumberOfLogFiles = 10;
+            
+            FileHandler fileHandler = new FileHandler(logFilePath, maxSizeOfTheLogFile, maxNumberOfLogFiles);
+            SimpleFormatter simpleFormatter = new SimpleFormatter();
+            fileHandler.setFormatter(simpleFormatter);
+            LOGGER.addHandler(fileHandler);
+            
+            LOGGER.info("REST documentation started analyzing");
+            
+        } catch(IOException ioe) {
+            
+            System.out.println(ioe.getMessage());
+        }
     }
 }

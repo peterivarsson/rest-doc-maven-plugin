@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2017 Peter Ivarsson
  */
-package se.peter.ivarsson.rest.doc;
+package se.peter.ivarsson.rest.doc.parser;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +26,6 @@ public class DataModelInfo {
 
     @Override
     public String toString() {
-        return "DataModelInfo{" + "fields=" + fields + '}';
+        return " DataModelInfo{" + "\n      fields=" + fields + "\n   }";
     }
 }

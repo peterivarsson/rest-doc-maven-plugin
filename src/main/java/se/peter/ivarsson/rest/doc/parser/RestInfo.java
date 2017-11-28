@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2017 Peter Ivarsson
  */
-package se.peter.ivarsson.rest.doc;
+package se.peter.ivarsson.rest.doc.parser;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,6 +36,6 @@ public class RestInfo {
 
     @Override
     public String toString() {
-        return "RestInfo{" + "classInfo=" + classInfo + ", domainDataMap=" + domainDataMap + '}';
+        return "RestInfo{" + "\n   classInfo=" + classInfo + ",\n   domainDataMap=" + domainDataMap + "\n}";
     }
 }

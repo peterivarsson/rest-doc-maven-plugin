@@ -9,7 +9,7 @@ import java.io.File;
 
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 
-import se.peter.ivarsson.rest.doc.RESTDocMojo;
+import se.peter.ivarsson.rest.doc.mojo.RESTDocMojo;
 
 
 /**
