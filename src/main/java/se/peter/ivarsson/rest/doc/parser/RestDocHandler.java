@@ -30,7 +30,7 @@ public class RestDocHandler {
 
     private URLClassLoader urlClassLoader;
 
-    private static final Logger LOGGER = Logger.getLogger( RestDocHandler.class.getName() );
+    private static final Logger LOGGER = Logger.getLogger(RestDocHandler.class.getSimpleName());
 
     public static RestInfo restInfo = new RestInfo();
 
@@ -38,13 +38,13 @@ public class RestDocHandler {
      *
      */
     public RestDocHandler(File classesDirectory, File outputDirectory) {
-        
+
         init(outputDirectory);
 
         ClassLoader currentThreadClassLoader = Thread.currentThread().getContextClassLoader();
 
         try {
-            
+
             // Add the classesDirectory dir to the classpath
             urlClassLoader = new URLClassLoader(new URL[]{classesDirectory.toURI().toURL()}, currentThreadClassLoader);
 
@@ -106,7 +106,7 @@ public class RestDocHandler {
                 }
             }
 
-            checkClassMethodsForPathInformation( classInfo, clazz );
+            checkClassMethodsForPathInformation(classInfo, clazz);
 
         } catch (ClassNotFoundException cnfe) {
 
@@ -187,7 +187,7 @@ public class RestDocHandler {
     private void checkClassMethodsForPathInformation(ClassInfo classInfo, Class clazz) {
 
         try {
-            
+
             Method[] methods = clazz.getDeclaredMethods();
 
             for (Method method : methods) {
@@ -199,14 +199,46 @@ public class RestDocHandler {
                     if (annotation instanceof javax.ws.rs.Path) {
 
                         // We found a method with Path annotation
-                        addMethodInfoToRestInfoList(classInfo, (javax.ws.rs.Path) annotation, method);
+                        if (checkIfMethodsHasHttpRequestType(methodAnnotations)) {
+
+                            // We found a method with a 'Http request type'
+                            addMethodInfoToRestInfoList(classInfo, (javax.ws.rs.Path) annotation, method);
+                        }
                     }
                 }
             }
-        } catch(Exception cnfe) {
-            
+        } catch (Exception cnfe) {
+
             LOGGER.info(cnfe.getMessage());
         }
+    }
+
+    // Only add methods that has 'Http request types'
+    private boolean checkIfMethodsHasHttpRequestType(Annotation[] methodAnnotations) {
+
+        LOGGER.info("checkIfMethodsHasHttpRequestType()");
+
+        for (Annotation annotation : methodAnnotations) {
+
+            if (annotation instanceof javax.ws.rs.GET) {
+
+                return true;
+
+            } else if (annotation instanceof javax.ws.rs.POST) {
+
+                return true;
+
+            } else if (annotation instanceof javax.ws.rs.PUT) {
+
+                return true;
+
+            } else if (annotation instanceof javax.ws.rs.DELETE) {
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void addMethodInfoToRestInfoList(ClassInfo classInfo, javax.ws.rs.Path annotation, Method method) {
@@ -231,6 +263,7 @@ public class RestDocHandler {
         if (classInfo.getClassRootPath().length() > 0) {
 
             pathValue = classInfo.getClassRootPath() + "/" + annotation.value();
+
         } else {
 
             pathValue = annotation.value();
@@ -268,15 +301,19 @@ public class RestDocHandler {
             if (annotation instanceof javax.ws.rs.GET) {
 
                 methodInfo.setHttpRequestType("GET");
+
             } else if (annotation instanceof javax.ws.rs.POST) {
 
                 methodInfo.setHttpRequestType("POST");
+
             } else if (annotation instanceof javax.ws.rs.PUT) {
 
                 methodInfo.setHttpRequestType("PUT");
+
             } else if (annotation instanceof javax.ws.rs.DELETE) {
 
                 methodInfo.setHttpRequestType("DELETE");
+
             } else if (annotation instanceof javax.ws.rs.Produces) {
 
                 javax.ws.rs.Produces produces = (javax.ws.rs.Produces) annotation;
@@ -286,6 +323,7 @@ public class RestDocHandler {
                     if (firstProduceType == true) {
 
                         firstProduceType = false;
+
                     } else {
 
                         producesTypes.append(", ");
@@ -295,6 +333,7 @@ public class RestDocHandler {
                 }
 
                 methodInfo.setProducesType(producesTypes.toString());
+
             } else if (annotation instanceof javax.ws.rs.Consumes) {
 
                 javax.ws.rs.Consumes consumes = (javax.ws.rs.Consumes) annotation;
@@ -518,7 +557,8 @@ public class RestDocHandler {
 
     private boolean isGetter(Method method) {
 
-        if (!method.getName().startsWith("get")) {
+        if (!(method.getName().startsWith("get")
+                || method.getName().startsWith("is")))  {
             return false;
         }
 
@@ -528,25 +568,25 @@ public class RestDocHandler {
 
         return !method.getReturnType().equals(void.class);
     }
-    
+
     private void init(File outputDirectory) {
-        
+
         try {
 
             String logFilePath = outputDirectory.getAbsolutePath() + "/RestDoc.log";
-    
+
             int maxSizeOfTheLogFile = 500_000;
             int maxNumberOfLogFiles = 10;
-            
+
             FileHandler fileHandler = new FileHandler(logFilePath, maxSizeOfTheLogFile, maxNumberOfLogFiles);
             SimpleFormatter simpleFormatter = new SimpleFormatter();
             fileHandler.setFormatter(simpleFormatter);
             LOGGER.addHandler(fileHandler);
-            
+
             LOGGER.info("REST documentation started analyzing");
-            
-        } catch(IOException ioe) {
-            
+
+        } catch (IOException ioe) {
+
             System.out.println(ioe.getMessage());
         }
     }

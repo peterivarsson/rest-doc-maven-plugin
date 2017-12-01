@@ -9,6 +9,7 @@ import java.io.File;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
+import se.peter.ivarsson.rest.doc.html.HtmlOutput;
 import se.peter.ivarsson.rest.doc.parser.RestDocHandler;
 import se.peter.ivarsson.rest.doc.parser.RestInfo;
 
@@ -59,6 +60,12 @@ public class RESTDocMojo extends AbstractMojo {
         }
 
         RestDocHandler restDocHandler = new RestDocHandler(classesDirectory, outputDirectory);
+
+        getLog().info("\nRESTDocMojo maven plugin creates HTML output files\n");
+        
+        HtmlOutput htmlOutput = new HtmlOutput();
+        
+        htmlOutput.createHTMLDocumantation(outputDirectory);
 
         getLog().info("\nRESTDocMojo maven plugin FINISHED executing\n");
     }
