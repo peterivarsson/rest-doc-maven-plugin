@@ -13,10 +13,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
+import se.peter.ivarsson.rest.doc.parser.ClassInfo;
 import se.peter.ivarsson.rest.doc.parser.FieldInfo;
 
 import se.peter.ivarsson.rest.doc.parser.MethodInfo;
@@ -70,16 +72,23 @@ public class HtmlOutput {
         LOGGER.info("htmlRestResourcesList()  restInfo.ClassInfo size = "
                 + RestDocHandler.restInfo.getClassInfo().size());
 
-        RestDocHandler.restInfo.getClassInfo().stream().forEach((res) -> {
+        RestDocHandler.restInfo.getClassInfo().stream()
+                .sorted(new Comparator<ClassInfo>() {
+                    
+                    @Override
+                    public int compare(ClassInfo o1, ClassInfo o2) {
+                        
+                        return o1.getClassName().compareTo(o2.getClassName());
+                    }
+                })
+                .forEach((res) -> {
 
-            htmlBuffer.append("\r\t\t<li><a href=./");
-            htmlBuffer.append(res.getClassName());
-            htmlBuffer.append(".html>");
-
-            htmlBuffer.append(res.getClassName());
-
-            htmlBuffer.append("</a></li>\r\t\t<BR>");
-        });
+                    htmlBuffer.append("\r\t\t<li><a href=./");
+                    htmlBuffer.append(res.getPackageAndClassName());
+                    htmlBuffer.append(".html>");
+                    htmlBuffer.append(res.getClassName());
+                    htmlBuffer.append("</a></li>\r\t\t<BR>");
+                });
 
         htmlBuffer.append("\r\t</ul>");
     }
@@ -144,25 +153,25 @@ public class HtmlOutput {
         LOGGER.info("writeResouresDocumentationToFiles() restInfo.ClassInfo size = "
                 + RestDocHandler.restInfo.getClassInfo().size());
 
-        RestDocHandler.restInfo.getClassInfo().stream().forEach((res) -> {
+        RestDocHandler.restInfo.getClassInfo().stream().forEach(classInfo -> {
 
-            writeResouresDocumentationToFile(outputDirectory, res.getClassName());
+            writeResouresDocumentationToFile(outputDirectory, classInfo);
         });
     }
 
-    private void writeResouresDocumentationToFile(final File outputDirectory, final String resourceType) {
+    private void writeResouresDocumentationToFile(final File outputDirectory, final ClassInfo classInfo) {
 
-        LOGGER.info("writeResouresDocumentationToFile( " + resourceType + " )");
+        LOGGER.info("writeResouresDocumentationToFile( " + classInfo.getClassName() + " )");
 
-        Path programmersInfoFilePath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + "/" + resourceType + ".html"));
+        Path programmersInfoFilePath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + "/" + classInfo.getPackageAndClassName() + ".html"));
 
         final StringBuffer htmlBuffer = htmlHeader();
 
-        htmlBodyHeader(htmlBuffer, resourceType);
+        htmlBodyHeader(htmlBuffer, classInfo.getClassName());
 
         htmlGoHome(htmlBuffer);
 
-        htmlRestResourceDetail(htmlBuffer, resourceType);
+        htmlRestResourceDetail(htmlBuffer, classInfo.getClassName());
 
         htmlFooter(htmlBuffer);
 
@@ -221,13 +230,13 @@ public class HtmlOutput {
 
         methodInfoList.stream().forEach((method) -> {
 
-            htmlMethodDetail(htmlBuffer, method, resourceType, methodNumber);
+            htmlMethodDetail(htmlBuffer, method, methodNumber);
 
             methodNumber++;
         });
     }
 
-    private void htmlMethodDetail(final StringBuffer htmlBuffer, final MethodInfo methodInfo, final String resourceType, final int methodNumber) {
+    private void htmlMethodDetail(final StringBuffer htmlBuffer, final MethodInfo methodInfo, final int methodNumber) {
 
         htmlBuffer.append("\r\r\r\t\t<p><a name=\"method");
         htmlBuffer.append(methodNumber);
@@ -296,12 +305,24 @@ public class HtmlOutput {
 
         } else {
 
-            // Domain data
-            htmlBuffer.append("\r\t\t<a href=./");
-            htmlBuffer.append(methodInfo.getReturnInfo().getAnnotatedReturnType());
-            htmlBuffer.append(".html>");
-            htmlBuffer.append(methodInfo.getReturnInfo().getAnnotatedReturnType());
-            htmlBuffer.append("</a>");
+            if (isDomainData(methodInfo.getReturnInfo().getReturnClassName())) {
+
+                // Domain data
+                htmlBuffer.append("\r\t\t<a href=./");
+                htmlBuffer.append(methodInfo.getReturnInfo().getReturnClassName());
+                htmlBuffer.append(".html>");
+                htmlBuffer.append(methodInfo.getReturnInfo().getReturnClassName());
+                htmlBuffer.append("</a>");
+
+            } else {
+
+                // Annotated ReturnType Domain data
+                htmlBuffer.append("\r\t\t<a href=./");
+                htmlBuffer.append(methodInfo.getReturnInfo().getAnnotatedReturnType());
+                htmlBuffer.append(".html>");
+                htmlBuffer.append(methodInfo.getReturnInfo().getAnnotatedReturnType());
+                htmlBuffer.append("</a>");
+            }
         }
 
         htmlBuffer.append("</td><td>");
@@ -315,55 +336,41 @@ public class HtmlOutput {
 
         LOGGER.info("writeDomainDataToFiles() restInfo.ClassInfo size = " + RestDocHandler.restInfo.getClassInfo().size());
 
-        RestDocHandler.restInfo.getClassInfo().stream().filter(Objects::nonNull).forEach(classInfo -> {
+        RestDocHandler.restInfo.getDomainDataMap().entrySet().stream()
+                .filter(Objects::nonNull).forEach(domainData -> {
 
-            if (classInfo.getMethodInfo() != null) {
-
-                classInfo.getMethodInfo().stream().filter(Objects::nonNull).forEach(methodInfo -> {
-
-                    if (methodInfo.getParameterInfo() != null) {
-
-                        methodInfo.getParameterInfo().stream().filter(Objects::nonNull).forEach(parameterInfo -> {
-
-                            if (isDomainData(parameterInfo.getParameterClassName())) {
-
-                                writeDomainDataToFile(outputDirectory, classInfo.getClassName(), parameterInfo.getParameterClassName());
-                            }
-                        });
-                    }
-                });
-            }
+            writeDomainDataToFile(outputDirectory, domainData.getKey());
         });
     }
 
-    private void writeDomainDataToFile(final File outputDirectory, final String resourceType, final String domainDataType) {
+    private void writeDomainDataToFile(final File outputDirectory, final String domainDataType) {
 
-        LOGGER.info("writeDomainDataToFile( " + resourceType + ", " + domainDataType + " )");
+        LOGGER.info("writeDomainDataToFile( " + domainDataType + " )");
 
         Path programmersInfoFilePath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + "/" + domainDataType + ".html"));
 
         final StringBuffer htmlBuffer = htmlHeader();
 
-        htmlBodyHeader(htmlBuffer, resourceType);
+        htmlBodyHeader(htmlBuffer, domainDataType);
 
         htmlGoHome(htmlBuffer);
 
-        htmlRestResourceDomainData(htmlBuffer, resourceType, domainDataType);
+        htmlRestResourceDomainData(htmlBuffer, domainDataType);
 
         htmlFooter(htmlBuffer);
 
         writeHtmlToFile(programmersInfoFilePath, htmlBuffer);
     }
 
-    private void htmlRestResourceDomainData(final StringBuffer htmlBuffer, final String resourceType, final String domainDataType) {
+    private void htmlRestResourceDomainData(final StringBuffer htmlBuffer, final String domainDataType) {
 
-        LOGGER.info("htmlRestResourceDomainData() resourceType = " + resourceType + ", domainDataType = " + domainDataType);
+        LOGGER.info("htmlRestResourceDomainData() domainDataType = " + domainDataType);
 
         HashMap domainData = RestDocHandler.restInfo.getDomainDataMap();
 
         if (domainData.get(domainDataType) == null) {
 
-            LOGGER.severe("htmlRestResourceDomainData() resourceType = " + resourceType + ", domainDataType = " + domainDataType + "Not found in DomainData map");
+            LOGGER.severe("htmlRestResourceDomainData() domainDataType = " + domainDataType + "Not found in DomainData map");
             return;
         }
 
@@ -389,15 +396,12 @@ public class HtmlOutput {
                         && (field.getListOfType().startsWith("java.") == false)) {
 
                     // Domain data
-                    htmlBuffer.append("\r\t\t<a href=\"");
-//                    htmlBuffer.append(uriInfo.getBaseUri().getPath());   // '/restdoc/'
-                    htmlBuffer.append("rest-api/");
-                    htmlBuffer.append(resourceType);
-                    htmlBuffer.append("/data/");
+                    htmlBuffer.append("\r\t\t<a href=./");
                     htmlBuffer.append(field.getListOfType());
-                    htmlBuffer.append("\">");
+                    htmlBuffer.append(".html>");
                     htmlBuffer.append(field.getListOfType());
                     htmlBuffer.append("</a>");
+
                 } else {
 
                     // This is a Primitive Data Type
@@ -461,7 +465,6 @@ public class HtmlOutput {
         htmlBuffer.append("\r\t\t\t<td style=\"border: none;\"><a href=./index.html><h4>Home</h4></a></td>");
         htmlBuffer.append("\r\r\t\t<tr>");
         htmlBuffer.append("\r\r\t<table>");
-        htmlBuffer.append("\r\t</body>\r</html>");
     }
 
     private void writeHtmlToFile(final Path indexFilePath, final StringBuffer htmlBuffer) {
@@ -527,232 +530,4 @@ public class HtmlOutput {
 
         return true;
     }
-
-//    @Context
-//    UriInfo uriInfo;
-//
-//    /**
-//     * Returns a list of movies that is currently running in a specific city. Ordered by movie name in ascending order.
-//     *
-//     * @return
-//     */
-//    @GET
-//    @Produces({MediaType.TEXT_HTML})
-//    @Path("")
-//    private String getRestDocumentation() {
-//
-//        LOGGER.info("getResouresDocumentation() main");
-//
-//        final StringBuffer htmlBuffer = htmlHeader();
-//
-//        htmlBodyHeader(htmlBuffer, "REST api");
-//
-//        htmlRestResourcesList(htmlBuffer);
-//
-//        htmlGoToProgrammersInfo(htmlBuffer);
-//
-//        htmlFooter(htmlBuffer);
-//
-//        return htmlBuffer.toString();
-//    }
-//
-//    /**
-//     * Returns a list of movies that is currently running in a specific city. Ordered by movie name in ascending order.
-//     *
-//     * @return
-//     */
-//    @GET
-//    @Produces({MediaType.TEXT_HTML})
-//    @Path("/{" + RESOURCE_TYPE + "}")
-//    private String getResouresDocumentation(@PathParam(RESOURCE_TYPE) final String resourceType) {
-//
-//        LOGGER.info("getResouresDocumentation( " + resourceType + " )");
-//
-//        final StringBuffer htmlBuffer = htmlHeader();
-//
-//        htmlBodyHeader(htmlBuffer, resourceType);
-//
-//        htmlGoBack(htmlBuffer);
-//
-//        htmlRestResourceDetail(htmlBuffer, resourceType);
-//
-//        htmlGoBack(htmlBuffer);
-//
-//        htmlFooter(htmlBuffer);
-//
-//        return htmlBuffer.toString();
-//    }
-//
-//    /**
-//     * Returns a list of movies that is currently running in a specific city. Ordered by movie name in ascending order.
-//     *
-//     * @return
-//     */
-//    @GET
-//    @Produces({MediaType.TEXT_HTML})
-//    @Path("/{" + RESOURCE_TYPE + "}/data/{" + DOMAIN_DATA_TYPE + "}")
-//    private String getDomainDataDocumentation(@PathParam(RESOURCE_TYPE) final String resourceType,
-//            @PathParam(DOMAIN_DATA_TYPE) final String domainDataType) {
-//
-//        LOGGER.info("getResouresDocumentation( " + resourceType + ", " + domainDataType + " )");
-//
-//        final StringBuffer htmlBuffer = htmlHeader();
-//
-//        htmlBodyHeader(htmlBuffer, domainDataType);
-//
-//        htmlGoBack(htmlBuffer, resourceType);
-//
-//        htmlRestResourceDomainData(htmlBuffer, resourceType, domainDataType);
-//
-//        htmlGoBack(htmlBuffer, resourceType);
-//
-//        htmlFooter(htmlBuffer);
-//
-//        return htmlBuffer.toString();
-//    }
-//
-//    /**
-//     * Returns a list of movies that is currently running in a specific city. Ordered by movie name in ascending order.
-//     *
-//     * @return
-//     */
-//    @GET
-//    @Produces({MediaType.TEXT_HTML})
-//    @Path("/info")
-//    private String getRestProgrammerInfo() {
-//
-//        final StringBuffer htmlBuffer = htmlHeader();
-//
-//        htmlBodyHeader(htmlBuffer, "Programmers information");
-//
-//        htmlGoBack(htmlBuffer);
-//
-//        htmlRestProgrammerInfo(htmlBuffer);
-//
-//        htmlGoBack(htmlBuffer);
-//
-//        htmlFooter(htmlBuffer);
-//
-//        return htmlBuffer.toString();
-//    }
-//
-//    private void htmlRestResourceDomainData(final StringBuffer htmlBuffer, final String resourceType, final String domainDataType) {
-//
-//        LOGGER.info("htmlRestResourceDomainData()  restInfo.ClassInfo size = "
-//                + RestDocHandler.restInfo.getClassInfo().size());
-//
-//        final List<FieldInfo> fields = RestDocHandler.restInfo.getDomainDataMap().get(domainDataType).getFields();
-//
-//        htmlBuffer.append("\r\r\t\t<table>");
-//
-//        htmlBuffer.append("\r\t\t\t<tr><td>Field name</td><td>Field type</td><td>Type in list</td></tr>");
-//
-//        fields.stream().forEach((field) -> {
-//
-//            htmlBuffer.append("\r\t\t\t<tr><td>");
-//
-//            htmlBuffer.append(field.getFieldName());
-//
-//            htmlBuffer.append("</td><td>");
-//            htmlBuffer.append(field.getFieldType());
-//            htmlBuffer.append("</td><td>");
-//
-//            if (!field.getListOfType().isEmpty()) {
-//
-//                if ((field.getListOfType().contains(".") == true)
-//                        && (field.getListOfType().startsWith("java.") == false)) {
-//
-//                    // Domain data
-//                    htmlBuffer.append("\r\t\t<a href=\"");
-//                    htmlBuffer.append(uriInfo.getBaseUri().getPath());   // '/restdoc/'
-//                    htmlBuffer.append("rest-api/");
-//                    htmlBuffer.append(resourceType);
-//                    htmlBuffer.append("/data/");
-//                    htmlBuffer.append(field.getListOfType());
-//                    htmlBuffer.append("\">");
-//                    htmlBuffer.append(field.getListOfType());
-//                    htmlBuffer.append("</a>");
-//                } else {
-//
-//                    // This is a Primitive Data Type
-//                    htmlBuffer.append(field.getListOfType());
-//                }
-//            } else {
-//
-//                // This is not a list
-//                htmlBuffer.append("-");
-//            }
-//
-//            htmlBuffer.append("</td></tr>");
-//        });
-//
-//        htmlBuffer.append("\r\t\t</table><BR>");
-//    }
-//
-//    private void htmlRestProgrammerInfo(final StringBuffer htmlBuffer) {
-//
-//        // DocReturnType
-//        htmlBuffer.append("\r\r\t\t<table>");
-//
-//        htmlBuffer.append("\r\t\t\t<tr><td>Annotation</td><td>Comment</td></tr>");
-//        htmlBuffer.append("\r\t\t\t<tr><td>DocReturnType</td><td>If you wan't to set an other return type than the default return type. <BR>Se example below</td></tr>");
-//        htmlBuffer.append("\r\t\t\t<tr><td colspan=2></td></tr>");
-//        htmlBuffer.append("\r\t\t\t<tr><td colspan=2>");
-//
-//        htmlBuffer.append("@POST<BR>@Produces( { MediaType.APPLICATION_JSON } )<BR>@Path( PATH_VALIDATE )<BR>"
-//                + "<b>@DocReturnType( key = \"se.cybercom.rest.doc.PaymentValidation\" )</b><BR>"
-//                + "public Response validatePayment( ) {<BR><BR>"
-//                + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PaymentValidation paymentValidation = new PaymentValidation();<BR><BR>"
-//                + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return Response.ok( paymentValidation ).build();<BR>}");
-//
-//        htmlBuffer.append("</td></tr>");
-//
-//        // DocListType
-//        htmlBuffer.append("\r\t\t\t<tr><td colspan=2><BR><BR></td></tr>");
-//
-//        htmlBuffer.append("\r\t\t\t<tr><td>Annotation</td><td>Comment</td></tr>");
-//        htmlBuffer.append("\r\t\t\t<tr><td>DocListType</td><td>If the method returns a list of some kind ( java.util.List ),<BR>"
-//                + "and you wan't specify what kind of list it is, use this annotation. <BR>Se example below</td></tr>");
-//        htmlBuffer.append("\r\t\t\t<tr><td colspan=2></td></tr>");
-//        htmlBuffer.append("\r\t\t\t<tr><td colspan=2>");
-//
-//        htmlBuffer.append(":<BR>private List&lt;Movie&gt; movies;<BR>"
-//                + "private List&lt;String&gt; movieVersions;<BR>"
-//                + ":<BR>/**<BR> * @return A list of movies.<BR> */<BR>"
-//                + "<b>@DocListType( key = \"se.cybercom.rest.doc.domain.Movie\" )</b><BR>"
-//                + "public List<Movie> getMovies() {<BR><BR>"
-//                + "&nbsp;&nbsp;&nbsp;&nbsp;return movies;<BR>}<BR>:<BR><BR>"
-//                + ":<BR><b>@DocListType( key = \"String\" )</b><BR>"
-//                + "public List<String> getMovieVersions() {<BR><BR>"
-//                + "&nbsp;&nbsp;&nbsp;&nbsp;return movieVersions;<BR>}<BR>:");
-//
-//        htmlBuffer.append("</td></tr>");
-//        htmlBuffer.append("\r\t\t</table><BR>");
-//    }
-//
-//    private void htmlGoBack(final StringBuffer htmlBuffer) {
-//
-//        htmlBuffer.append("\r\r\t<ul style=\"list-style-type: none\">");
-//        htmlBuffer.append("\r\t\t<li><a href=\"");
-//        htmlBuffer.append(uriInfo.getBaseUri().getPath());   // '/restdoc/'
-//        htmlBuffer.append("rest-api\"/><h4>Go Back</h4></a></li>");
-//        htmlBuffer.append("\r\t</ul>");
-//    }
-//
-//    private void htmlGoBack(final StringBuffer htmlBuffer, final String resourceType) {
-//
-//        RestDocHandler.restInfo.getClassInfo().stream().forEach((res) -> {
-//
-//            if (res.getClassName().equals(resourceType)) {
-//
-//                htmlBuffer.append("\r\t<ul style=\"list-style-type: none\">");
-//                htmlBuffer.append("\r\t\t<li><a href=\"");
-//                htmlBuffer.append(uriInfo.getBaseUri().getPath());   // '/restdoc/'
-//                htmlBuffer.append("rest-api/");
-//                htmlBuffer.append(res.getClassName());
-//                htmlBuffer.append("\"><h4>Go Back</h4></a></li>");
-//                htmlBuffer.append("\r\t</ul>");
-//            }
-//        });
-//    }
 }

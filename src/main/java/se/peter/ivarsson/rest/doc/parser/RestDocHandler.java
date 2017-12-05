@@ -37,9 +37,9 @@ public class RestDocHandler {
     /**
      *
      */
-    public RestDocHandler(File classesDirectory, File outputDirectory) {
+    public RestDocHandler(File classesDirectory, File loggingDirectory) {
 
-        init(outputDirectory);
+        init(loggingDirectory);
 
         ClassLoader currentThreadClassLoader = Thread.currentThread().getContextClassLoader();
 
@@ -279,7 +279,7 @@ public class RestDocHandler {
         classInfo.getMethodInfo().add(methodInfo);
 
         addMethodsPathMethod(methodInfo, returnInfo, method);
-        addMethodReturnType(methodInfo, returnInfo, method);
+        addMethodReturnType(returnInfo, method);
         addMethodParameters(methodInfo, method);
     }
 
@@ -362,9 +362,16 @@ public class RestDocHandler {
         }
     }
 
-    private void addMethodReturnType(MethodInfo methodInfo, ReturnInfo returnInfo, Method method) {
+    private void addMethodReturnType(ReturnInfo returnInfo, Method method) {
 
-        returnInfo.setReturnClassName(method.getReturnType().getName());
+        String returnTypeName = method.getReturnType().getName();
+
+        returnInfo.setReturnClassName(returnTypeName);
+
+        if (isDomainData(returnTypeName)) {
+
+            DataModelInfo dataModelInfo = addDomainDataInfo(returnTypeName);
+        }
     }
 
     private void addAnnotatedReturnType(ReturnInfo returnInfo, String returnTypeClassName) {
@@ -374,14 +381,14 @@ public class RestDocHandler {
         addDomainDataInfo(returnTypeClassName);
     }
 
-    private void addDomainDataInfo(String className) {
+    private DataModelInfo addDomainDataInfo(String className) {
 
         DataModelInfo domainData = restInfo.getDomainDataMap().get(className);
 
         if (domainData != null) {
 
             // This data already exists
-            return;
+            return null;
         }
 
         try {
@@ -425,6 +432,20 @@ public class RestDocHandler {
                             }
                         }
 
+                        if (fieldInfo.getListOfType().isEmpty() && (fieldType.equals("java.util.List"))) {
+
+                            // "java.util.List<java.lang.String>"
+                            int startListType = method.getGenericReturnType().getTypeName().indexOf('<');
+                            int endListType = method.getGenericReturnType().getTypeName().indexOf('>');
+                            String typeInList = method.getGenericReturnType().getTypeName().substring(startListType + 1, endListType);
+                            fieldInfo.setListOfType(typeInList);
+
+                            if (isDomainData(typeInList)) {
+
+                                addDomainDataInfo(typeInList);
+                            }
+                        }
+
                         dataModelInfo.getFields().add(fieldInfo);
                     }
                 }
@@ -434,9 +455,13 @@ public class RestDocHandler {
 
                 restInfo.getDomainDataMap().put(className, dataModelInfo);
             }
+
+            return dataModelInfo;
+
         } catch (ClassNotFoundException cnfe) {
 
             LOGGER.severe("addDomainDataInfo, ClassNotFoundException: " + cnfe.getMessage());
+            return null;
         }
     }
 
@@ -558,7 +583,7 @@ public class RestDocHandler {
     private boolean isGetter(Method method) {
 
         if (!(method.getName().startsWith("get")
-                || method.getName().startsWith("is")))  {
+                || method.getName().startsWith("is"))) {
             return false;
         }
 
@@ -569,11 +594,11 @@ public class RestDocHandler {
         return !method.getReturnType().equals(void.class);
     }
 
-    private void init(File outputDirectory) {
+    private void init(File loggingDirectory) {
 
         try {
-
-            String logFilePath = outputDirectory.getAbsolutePath() + "/RestDoc.log";
+            
+            String logFilePath = loggingDirectory.getAbsolutePath() + "/RestDoc.log";
 
             int maxSizeOfTheLogFile = 500_000;
             int maxNumberOfLogFiles = 10;
@@ -589,5 +614,57 @@ public class RestDocHandler {
 
             System.out.println(ioe.getMessage());
         }
+    }
+
+    private boolean isDomainData(final String parameterName) {
+
+        // Check for 'Java classes' or 'Primitive Data Types'
+        if (parameterName.startsWith("java")) {
+
+            // Is a Java class
+            return false;
+
+        } else if (parameterName.equals("byte")) {
+
+            // Is a Primitive Data Type
+            return false;
+
+        } else if (parameterName.equals("short")) {
+
+            // Is a Primitive Data Type
+            return false;
+
+        } else if (parameterName.equals("int")) {
+
+            // Is a Primitive Data Type
+            return false;
+
+        } else if (parameterName.equals("long")) {
+
+            // Is a Primitive Data Type
+            return false;
+
+        } else if (parameterName.equals("float")) {
+
+            // Is a Primitive Data Type
+            return false;
+
+        } else if (parameterName.equals("double")) {
+
+            // Is a Primitive Data Type
+            return false;
+
+        } else if (parameterName.equals("boolean")) {
+
+            // Is a Primitive Data Type
+            return false;
+
+        } else if (parameterName.equals("char")) {
+
+            // Is a Primitive Data Type
+            return false;
+        }
+
+        return true;
     }
 }

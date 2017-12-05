@@ -59,6 +59,7 @@
                     <!-- Specify the RESTDoc parameters -->
                     <classesDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-test-mobilebackend-api/target/classes</classesDirectory>
                     <outputDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-output-directory</outputDirectory>
+                    <loggingDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-logging-directory</loggingDirectory>
                 </configuration>
 
                 <executions>
