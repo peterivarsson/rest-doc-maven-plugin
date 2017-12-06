@@ -74,10 +74,10 @@ public class HtmlOutput {
 
         RestDocHandler.restInfo.getClassInfo().stream()
                 .sorted(new Comparator<ClassInfo>() {
-                    
+
                     @Override
                     public int compare(ClassInfo o1, ClassInfo o2) {
-                        
+
                         return o1.getClassName().compareTo(o2.getClassName());
                     }
                 })
@@ -241,13 +241,32 @@ public class HtmlOutput {
         htmlBuffer.append("\r\r\r\t\t<p><a name=\"method");
         htmlBuffer.append(methodNumber);
         htmlBuffer.append("\"><h3>");
-        htmlBuffer.append(methodInfo.getRestPath());
+        htmlBuffer.append(methodInfo.getHttpRequestType());
+        if (methodInfo.getRestPath().equals("")) {
+
+            htmlBuffer.append(" \"\"");
+
+        } else {
+
+            htmlBuffer.append(" ");
+            htmlBuffer.append(methodInfo.getRestPath());
+        }
+        if (methodInfo.isDeprecated()) {
+
+            htmlBuffer.append(" - Deprecated");
+        }
         htmlBuffer.append("</h3></a></p>");
 
-        htmlBuffer.append("\r\r\t\t<p>");
-        htmlBuffer.append(methodInfo.getHttpRequestType());
-        htmlBuffer.append("</p>");
-        htmlBuffer.append("\r\r\t\t<table>\r\t\t\t<tr><td>Class</td><td>Name</td><td>Parameter type</td></tr>");
+        htmlBuffer.append("\r\r\t\t<table>");
+
+        if (methodInfo.getJavaDoc() != null) {
+
+            htmlBuffer.append("\r\t\t\t<tr><td colspan=\"3\">");
+            htmlBuffer.append(replaceCarriageReturnWithHtmlBreak(methodInfo.getJavaDoc()));
+            htmlBuffer.append("</td></tr>");
+        }
+
+        htmlBuffer.append("\r\t\t\t<tr><td>Class</td><td>Name</td><td>Parameter type</td></tr>");
 
         List<ParameterInfo> parameterInfoList = methodInfo.getParameterInfo();
 
@@ -529,5 +548,10 @@ public class HtmlOutput {
         }
 
         return true;
+    }
+
+    String replaceCarriageReturnWithHtmlBreak(String javaDocComments) {
+
+        return javaDocComments.replaceAll("\r", "\r<BR>");
     }
 }

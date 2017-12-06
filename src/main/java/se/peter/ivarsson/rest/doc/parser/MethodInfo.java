@@ -14,12 +14,14 @@ import java.util.List;
 public class MethodInfo {
 
     private String methodName;
+    private boolean deprecated = false;
     private String restPath;
     private String httpRequestType;
     private String produceType = "";
     private String consumeType = "";
     private ReturnInfo returnInfo;
     private List<ParameterInfo> parameterInfo;
+    private String javaDoc;
 
     public String getMethodName() {
         return methodName;
@@ -85,8 +87,24 @@ public class MethodInfo {
         this.returnInfo = returnInfo;
     }
 
+    public String getJavaDoc() {
+        return javaDoc;
+    }
+
+    public void setJavaDoc(String javaDoc) {
+        this.javaDoc = javaDoc;
+    }
+
+    public boolean isDeprecated() {
+        return deprecated;
+    }
+
+    public void setDeprecated(boolean deprecated) {
+        this.deprecated = deprecated;
+    }
+
     @Override
     public String toString() {
-        return " MethodInfo{" + "\n         methodName=" + methodName + ",\n         restPath=" + restPath + ",\n         httpRequestType=" + httpRequestType + ",\n         produceType=" + produceType + ",\n         consumeType=" + consumeType + ",\n         returnInfo=" + returnInfo + ",\n         parameterInfo=" + parameterInfo + "\n      }";
+        return " MethodInfo{" + "\n         methodName=" + methodName + "\n         deprecated=" + deprecated + ",\n         restPath=" + restPath + ",\n         httpRequestType=" + httpRequestType + ",\n         produceType=" + produceType + ",\n         consumeType=" + consumeType + ",\n         returnInfo=" + returnInfo + ",\n         parameterInfo=" + parameterInfo + "\n         javaDoc=" + javaDoc + "\n      }";
     }
 }

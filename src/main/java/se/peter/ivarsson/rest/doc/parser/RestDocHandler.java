@@ -17,10 +17,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import se.peter.ivarsson.rest.doc.javadoc.JavaSourceParser;
 
 /**
  *
@@ -32,12 +34,14 @@ public class RestDocHandler {
 
     private static final Logger LOGGER = Logger.getLogger(RestDocHandler.class.getSimpleName());
 
+    private final JavaSourceParser javaSourceParser = new JavaSourceParser();
+
     public static RestInfo restInfo = new RestInfo();
 
     /**
      *
      */
-    public RestDocHandler(File classesDirectory, File loggingDirectory) {
+    public RestDocHandler(final File classesDirectory, final File sourceDirectory, final File loggingDirectory) {
 
         init(loggingDirectory);
 
@@ -63,7 +67,7 @@ public class RestDocHandler {
 
                         if (path.toString().endsWith(".class")) {
 
-                            checkClassFilesForPathAnnotations(path);
+                            checkClassFilesForPathAnnotations(sourceDirectory, path);
                         }
                     });
         } catch (IOException ioe) {
@@ -77,7 +81,7 @@ public class RestDocHandler {
 
     }
 
-    private void checkClassFilesForPathAnnotations(Path classNamePath) {
+    private void checkClassFilesForPathAnnotations(final File sourceDirectory, final Path classNamePath) {
 
         LOGGER.info("Class file: " + classNamePath.getFileName().toString());
 
@@ -90,6 +94,8 @@ public class RestDocHandler {
         }
 
         try {
+
+            HashMap<String, String> javaDocComments = javaSourceParser.parseJavaSource(sourceDirectory, classInfo.getPackageAndClassName());
 
             Class clazz = urlClassLoader.loadClass(classInfo.getPackageAndClassName());
 
@@ -106,7 +112,7 @@ public class RestDocHandler {
                 }
             }
 
-            checkClassMethodsForPathInformation(classInfo, clazz);
+            checkClassMethodsForPathInformation(classInfo, clazz, javaDocComments);
 
         } catch (ClassNotFoundException cnfe) {
 
@@ -119,7 +125,7 @@ public class RestDocHandler {
         }
     }
 
-    private ClassInfo getFullClassName(Path classNamePath) {
+    private ClassInfo getFullClassName(final Path classNamePath) {
 
         String pathName;
         String className = "";
@@ -175,7 +181,7 @@ public class RestDocHandler {
         return classInfo;
     }
 
-    private void addClassInfoToRestInfoList(ClassInfo classInfo, javax.ws.rs.Path annotation) {
+    private void addClassInfoToRestInfoList(final ClassInfo classInfo, final javax.ws.rs.Path annotation) {
 
         String pathValue = annotation.value();
 
@@ -184,7 +190,7 @@ public class RestDocHandler {
         restInfo.getClassInfo().add(classInfo);
     }
 
-    private void checkClassMethodsForPathInformation(ClassInfo classInfo, Class clazz) {
+    private void checkClassMethodsForPathInformation(final ClassInfo classInfo, final Class clazz, final HashMap<String, String> javaDocComments) {
 
         try {
 
@@ -202,7 +208,7 @@ public class RestDocHandler {
                         if (checkIfMethodsHasHttpRequestType(methodAnnotations)) {
 
                             // We found a method with a 'Http request type'
-                            addMethodInfoToRestInfoList(classInfo, (javax.ws.rs.Path) annotation, method);
+                            addMethodInfoToRestInfoList(classInfo, (javax.ws.rs.Path) annotation, method, javaDocComments);
                         }
                     }
                 }
@@ -214,7 +220,7 @@ public class RestDocHandler {
     }
 
     // Only add methods that has 'Http request types'
-    private boolean checkIfMethodsHasHttpRequestType(Annotation[] methodAnnotations) {
+    private boolean checkIfMethodsHasHttpRequestType(final Annotation[] methodAnnotations) {
 
         LOGGER.info("checkIfMethodsHasHttpRequestType()");
 
@@ -241,7 +247,7 @@ public class RestDocHandler {
         return false;
     }
 
-    private void addMethodInfoToRestInfoList(ClassInfo classInfo, javax.ws.rs.Path annotation, Method method) {
+    private void addMethodInfoToRestInfoList(final ClassInfo classInfo, final javax.ws.rs.Path annotation, final Method method, final HashMap<String, String> javaDocComments) {
 
         if (classInfo.getClassRootPath() == null) {
 
@@ -281,9 +287,16 @@ public class RestDocHandler {
         addMethodsPathMethod(methodInfo, returnInfo, method);
         addMethodReturnType(returnInfo, method);
         addMethodParameters(methodInfo, method);
+
+        String javaDocMethodComments = javaDocComments.get(method.getName());
+
+        if (javaDocMethodComments != null) {
+
+            methodInfo.setJavaDoc(javaDocMethodComments);
+        }
     }
 
-    private void addMethodsPathMethod(MethodInfo methodInfo, ReturnInfo returnInfo, Method method) {
+    private void addMethodsPathMethod(final MethodInfo methodInfo, final ReturnInfo returnInfo, final Method method) {
 
         StringBuilder producesTypes = new StringBuilder();
         boolean firstProduceType = true;
@@ -313,6 +326,10 @@ public class RestDocHandler {
             } else if (annotation instanceof javax.ws.rs.DELETE) {
 
                 methodInfo.setHttpRequestType("DELETE");
+
+            } else if (annotation instanceof java.lang.Deprecated) {
+
+                methodInfo.setDeprecated(true);
 
             } else if (annotation instanceof javax.ws.rs.Produces) {
 
@@ -362,7 +379,7 @@ public class RestDocHandler {
         }
     }
 
-    private void addMethodReturnType(ReturnInfo returnInfo, Method method) {
+    private void addMethodReturnType(final ReturnInfo returnInfo, final Method method) {
 
         String returnTypeName = method.getReturnType().getName();
 
@@ -374,14 +391,14 @@ public class RestDocHandler {
         }
     }
 
-    private void addAnnotatedReturnType(ReturnInfo returnInfo, String returnTypeClassName) {
+    private void addAnnotatedReturnType(final ReturnInfo returnInfo, final String returnTypeClassName) {
 
         returnInfo.setAnnotatedReturnType(returnTypeClassName);
 
         addDomainDataInfo(returnTypeClassName);
     }
 
-    private DataModelInfo addDomainDataInfo(String className) {
+    private DataModelInfo addDomainDataInfo(final String className) {
 
         DataModelInfo domainData = restInfo.getDomainDataMap().get(className);
 
@@ -432,7 +449,8 @@ public class RestDocHandler {
                             }
                         }
 
-                        if (fieldInfo.getListOfType().isEmpty() && (fieldType.equals("java.util.List"))) {
+                        if ((fieldInfo.getListOfType().isEmpty())
+                                && (fieldType.equals("java.util.List"))) {
 
                             // "java.util.List<java.lang.String>"
                             int startListType = method.getGenericReturnType().getTypeName().indexOf('<');
@@ -446,26 +464,31 @@ public class RestDocHandler {
                             }
                         }
 
+                        if (isDomainData(fieldType)) {
+
+                            addDomainDataInfo(fieldType);
+                        }
+
                         dataModelInfo.getFields().add(fieldInfo);
                     }
                 }
+
+                if (!dataModelInfo.getFields().isEmpty()) {
+
+                    restInfo.getDomainDataMap().put(className, dataModelInfo);
+                }
+
+                return dataModelInfo;
             }
-
-            if (!dataModelInfo.getFields().isEmpty()) {
-
-                restInfo.getDomainDataMap().put(className, dataModelInfo);
-            }
-
-            return dataModelInfo;
-
         } catch (ClassNotFoundException cnfe) {
 
             LOGGER.severe("addDomainDataInfo, ClassNotFoundException: " + cnfe.getMessage());
-            return null;
         }
+
+        return null;
     }
 
-    private void addMethodParameters(MethodInfo methodInfo, Method method) {
+    private void addMethodParameters(final MethodInfo methodInfo, final Method method) {
 
         ParameterInfo parameterInfo;
 
@@ -580,7 +603,7 @@ public class RestDocHandler {
         }
     }
 
-    private boolean isGetter(Method method) {
+    private boolean isGetter(final Method method) {
 
         if (!(method.getName().startsWith("get")
                 || method.getName().startsWith("is"))) {
@@ -594,10 +617,10 @@ public class RestDocHandler {
         return !method.getReturnType().equals(void.class);
     }
 
-    private void init(File loggingDirectory) {
+    private void init(final File loggingDirectory) {
 
         try {
-            
+
             String logFilePath = loggingDirectory.getAbsolutePath() + "/RestDoc.log";
 
             int maxSizeOfTheLogFile = 500_000;

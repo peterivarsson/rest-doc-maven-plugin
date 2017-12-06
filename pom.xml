@@ -47,6 +47,12 @@
             <version>2.1</version>
         </dependency>
 
+        <dependency>
+           <groupId>com.github.javaparser</groupId>
+           <artifactId>javaparser-core</artifactId>
+           <version>3.5.5</version>
+       </dependency>
+
     </dependencies>
 
     <build>
@@ -58,6 +64,7 @@
                 <configuration>
                     <!-- Specify the RESTDoc parameters -->
                     <classesDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-test-mobilebackend-api/target/classes</classesDirectory>
+                    <sourcesDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-test-mobilebackend-api/src/main/java</sourcesDirectory>
                     <outputDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-output-directory</outputDirectory>
                     <loggingDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-logging-directory</loggingDirectory>
                 </configuration>
@@ -102,5 +109,10 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
-
+    <description>/*
+ * Rest Documentation maven plugin.
+ *
+ * Copyright (C) 2017 Peter Ivarsson
+ */
+</description>
 </project>

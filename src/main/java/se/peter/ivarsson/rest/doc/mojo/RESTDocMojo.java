@@ -26,13 +26,22 @@ import se.peter.ivarsson.rest.doc.parser.RestDocHandler;
 public class RESTDocMojo extends AbstractMojo {
 
     /**
-     * File path where to find the classses files ( a src directory )
+     * File path where to find the classes files ( the classes directory )
      *
      * @parameter property="classesDirectory"
      * @required
      * @readonly
      */
     private File classesDirectory;
+
+    /**
+     * File path where to find the source files ( the sources directory )
+     *
+     * @parameter property="sourcesDirectory"
+     * @required
+     * @readonly
+     */
+    private File sourcesDirectory;
 
     /**
      * File path where to put the HTML output files
@@ -61,6 +70,13 @@ public class RESTDocMojo extends AbstractMojo {
         if (!classesDirectory.exists() || !classesDirectory.isDirectory()) {
 
             String error = "Can't find classes directory: " + classesDirectory;
+            throw new MojoExecutionException(error);
+        }
+
+        // avoid execution if sources directory does not exist
+        if (!sourcesDirectory.exists() || !sourcesDirectory.isDirectory()) {
+
+            String error = "Can't find sources directory: " + sourcesDirectory;
             throw new MojoExecutionException(error);
         }
 
@@ -96,7 +112,7 @@ public class RESTDocMojo extends AbstractMojo {
             }
         }
 
-        new RestDocHandler(classesDirectory, loggingDirectory);
+        new RestDocHandler(classesDirectory, sourcesDirectory, loggingDirectory);
 
         getLog().info("\nRESTDocMojo maven plugin creates HTML output files\n");
 
