@@ -73,6 +73,7 @@ public class HtmlOutput {
                 + RestDocHandler.restInfo.getClassInfo().size());
 
         RestDocHandler.restInfo.getClassInfo().stream()
+                .filter(classInfo -> classInfo.getMethodInfo() != null)
                 .sorted(new Comparator<ClassInfo>() {
 
                     @Override
@@ -397,6 +398,12 @@ public class HtmlOutput {
 
         htmlBuffer.append("\r\r\t\t<table>");
 
+        if( RestDocHandler.restInfo.getDomainDataMap().get(domainDataType).getInfo() != null ) {
+            
+            htmlBuffer.append("\r\t\t\t<tr><td colspan=3>" + RestDocHandler.restInfo.getDomainDataMap().get(domainDataType).getInfo() + "</td></tr>");
+            htmlBuffer.append("\r\t\t\t<tr><td colspan=3></td></tr>");
+        }
+                
         htmlBuffer.append("\r\t\t\t<tr><td>Field name</td><td>Field type</td><td>Type in list</td></tr>");
 
         fields.stream().forEach((field) -> {

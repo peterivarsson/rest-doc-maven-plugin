@@ -109,10 +109,11 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
-    <description>/*
+    <description>
+/*
  * Rest Documentation maven plugin.
  *
  * Copyright (C) 2017 Peter Ivarsson
  */
-</description>
+    </description>
 </project>

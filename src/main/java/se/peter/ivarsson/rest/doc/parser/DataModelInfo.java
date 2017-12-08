@@ -15,6 +15,7 @@ import java.util.List;
 public class DataModelInfo {
 
     private List<FieldInfo> fields = new ArrayList<>();
+    private String info;
 
     public List<FieldInfo> getFields() {
         return fields;
@@ -24,8 +25,16 @@ public class DataModelInfo {
         this.fields = fields;
     }
 
+    public String getInfo() {
+        return info;
+    }
+
+    public void setInfo(String info) {
+        this.info = info;
+    }
+
     @Override
     public String toString() {
-        return " DataModelInfo{" + "\n      fields=" + fields + "\n   }";
+        return " DataModelInfo{" + "\n      info=" + info + "\n      fields=" + fields + "\n   }";
     }
 }

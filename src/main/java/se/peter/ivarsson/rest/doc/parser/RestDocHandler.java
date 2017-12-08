@@ -18,11 +18,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
-import se.peter.ivarsson.rest.doc.javadoc.JavaSourceParser;
+import se.peter.ivarsson.rest.doc.sourceParser.JavaSourceParser;
 
 /**
  *
@@ -35,6 +36,9 @@ public class RestDocHandler {
     private static final Logger LOGGER = Logger.getLogger(RestDocHandler.class.getSimpleName());
 
     private final JavaSourceParser javaSourceParser = new JavaSourceParser();
+
+    private final HashMap<String, String> javaDocComments = new HashMap<>();
+    private final HashSet<String> enumTypes = new HashSet<>();
 
     public static RestInfo restInfo = new RestInfo();
 
@@ -59,11 +63,23 @@ public class RestDocHandler {
 
         try {
 
+            Files.walk(Paths.get(sourceDirectory.toURI()))
+                    .filter(Files::isRegularFile)
+                    .forEach(path -> {
+
+                        LOGGER.info("Source path: " + path);
+
+                        if (path.toString().endsWith(".java")) {
+
+                            javaSourceParser.parseSourceFileForEnums(sourceDirectory, enumTypes, path);
+                        }
+                    });
+
             Files.walk(Paths.get(classesDirectory.toURI()))
                     .filter(Files::isRegularFile)
-                    .forEach((path) -> {
+                    .forEach(path -> {
 
-                        LOGGER.info("path: " + path);
+                        LOGGER.info("Class path: " + path);
 
                         if (path.toString().endsWith(".class")) {
 
@@ -95,7 +111,7 @@ public class RestDocHandler {
 
         try {
 
-            HashMap<String, String> javaDocComments = javaSourceParser.parseJavaSource(sourceDirectory, classInfo.getPackageAndClassName());
+            javaSourceParser.parseClassForJavaDocComments(sourceDirectory, javaDocComments, classInfo.getPackageAndClassName());
 
             Class clazz = urlClassLoader.loadClass(classInfo.getPackageAndClassName());
 
@@ -360,6 +376,7 @@ public class RestDocHandler {
                     if (firstConsumeType == true) {
 
                         firstConsumeType = false;
+
                     } else {
 
                         consumeTypes.append(", ");
@@ -405,14 +422,24 @@ public class RestDocHandler {
         if (domainData != null) {
 
             // This data already exists
+            LOGGER.info(className + " already exists in domain data");
             return null;
         }
+
+        LOGGER.info("Add " + className + " to domain data");
+
+        HashSet addDomainDataSet = new HashSet();
+
+//TODO remove
+if (className.equals("com.ncg.mobilebackend.domain.TicketType")) {
+
+    int i = 0;
+}
+        DataModelInfo dataModelInfo = new DataModelInfo();
 
         try {
 
             Class clazz = urlClassLoader.loadClass(className);
-
-            DataModelInfo dataModelInfo = new DataModelInfo();
 
             Method[] methods = clazz.getMethods();
 
@@ -426,7 +453,18 @@ public class RestDocHandler {
 
                         FieldInfo fieldInfo = new FieldInfo();
 
-                        char c[] = method.getName().substring(3).toCharArray();
+                        int startIndex = 0;
+
+                        if (method.getName().startsWith("get")) {
+
+                            startIndex = 3;
+
+                        } else {
+
+                            startIndex = 2;
+                        }
+
+                        char c[] = method.getName().substring(startIndex).toCharArray();
                         c[0] = Character.toLowerCase(c[0]);
 
                         fieldInfo.setFieldName(new String(c));
@@ -444,48 +482,79 @@ public class RestDocHandler {
 
                                 fieldInfo.setListOfType(annotationKey);
 
-                                // Try to add this annotation data
-                                addDomainDataInfo(annotationKey);
+                                // Add this annotation data to domain data list
+                                addDomainDataSet.add(annotationKey);
                             }
                         }
 
-                        if ((fieldInfo.getListOfType().isEmpty())
-                                && (fieldType.equals("java.util.List"))) {
+                        if (fieldInfo.getListOfType().isEmpty()) {
 
-                            // "java.util.List<java.lang.String>"
-                            int startListType = method.getGenericReturnType().getTypeName().indexOf('<');
-                            int endListType = method.getGenericReturnType().getTypeName().indexOf('>');
-                            String typeInList = method.getGenericReturnType().getTypeName().substring(startListType + 1, endListType);
-                            fieldInfo.setListOfType(typeInList);
+                            if (fieldType.equals("java.util.List")) {
 
-                            if (isDomainData(typeInList)) {
+                                // "java.util.List<java.lang.String>"
+                                int startListType = method.getGenericReturnType().getTypeName().indexOf('<');
+                                int endListType = method.getGenericReturnType().getTypeName().indexOf('>');
+                                String typeInList = method.getGenericReturnType().getTypeName().substring(startListType + 1, endListType);
+                                fieldInfo.setListOfType(typeInList);
 
-                                addDomainDataInfo(typeInList);
+                                if (isDomainData(typeInList)) {
+
+                                    addDomainDataSet.add(typeInList);
+                                }
+                            } else {
+
+                                if (isDomainData(fieldType)) {
+
+                                    addDomainDataSet.add(fieldType);
+
+                                    if (enumTypes.contains(fieldType)) {
+
+                                        // Found enum in set
+                                        fieldInfo.setListOfType("enum");
+                                    }
+                                }
                             }
-                        }
+                        } else {
 
-                        if (isDomainData(fieldType)) {
+                            // ListOfType not empty
+                            if (isDomainData(fieldInfo.getListOfType())) {
 
-                            addDomainDataInfo(fieldType);
+                                addDomainDataSet.add(fieldInfo.getListOfType());
+                            }
                         }
 
                         dataModelInfo.getFields().add(fieldInfo);
                     }
                 }
-
-                if (!dataModelInfo.getFields().isEmpty()) {
-
-                    restInfo.getDomainDataMap().put(className, dataModelInfo);
-                }
-
-                return dataModelInfo;
             }
+
+            if (dataModelInfo.getFields().isEmpty()) {
+            
+                dataModelInfo.setInfo("No fields found in this class");
+            }
+            
+            restInfo.getDomainDataMap().put(className, dataModelInfo);
+
+            addDomainDataSet.stream()
+                    .forEach(domaindata -> {
+
+                        addDomainDataInfo(domaindata.toString());
+                    });
+
         } catch (ClassNotFoundException cnfe) {
 
             LOGGER.severe("addDomainDataInfo, ClassNotFoundException: " + cnfe.getMessage());
+
+            return null;
+            
+        } catch (NoClassDefFoundError ncdfe) {
+
+            LOGGER.severe("addDomainDataInfo, NoClassDefFoundError: " + ncdfe.getMessage());
+            dataModelInfo.setInfo("ERROR: Reflection failed to get methods info, NoClassDefFoundError: " + ncdfe.getMessage());
+            restInfo.getDomainDataMap().put(className, dataModelInfo);
         }
 
-        return null;
+        return dataModelInfo;
     }
 
     private void addMethodParameters(final MethodInfo methodInfo, final Method method) {
@@ -589,6 +658,7 @@ public class RestDocHandler {
                             break;
                     }
                 } else {
+
                     parameterInfo.setParameterAnnotationName(parameter.getName());
                 }
 
