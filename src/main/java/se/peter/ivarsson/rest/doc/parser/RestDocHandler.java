@@ -38,7 +38,7 @@ public class RestDocHandler {
     private final JavaSourceParser javaSourceParser = new JavaSourceParser();
 
     private final HashMap<String, String> javaDocComments = new HashMap<>();
-    private final HashSet<String> enumTypes = new HashSet<>();
+    private final HashMap<String, String> enumTypes = new HashMap<>();
 
     public static RestInfo restInfo = new RestInfo();
 
@@ -71,7 +71,7 @@ public class RestDocHandler {
 
                         if (path.toString().endsWith(".java")) {
 
-                            javaSourceParser.parseSourceFileForEnums(sourceDirectory, enumTypes, path);
+                            javaSourceParser.parseSourceFileForEnums(sourceDirectory, enumTypes, path, urlClassLoader);
                         }
                     });
 
@@ -83,7 +83,7 @@ public class RestDocHandler {
 
                         if (path.toString().endsWith(".class")) {
 
-                            checkClassFilesForPathAnnotations(sourceDirectory, path);
+                            checkClassFilesForPathAnnotations(classesDirectory, path, sourceDirectory);
                         }
                     });
         } catch (IOException ioe) {
@@ -97,11 +97,11 @@ public class RestDocHandler {
 
     }
 
-    private void checkClassFilesForPathAnnotations(final File sourceDirectory, final Path classNamePath) {
+    private void checkClassFilesForPathAnnotations(final File classesDirectory, final Path classNamePath, final File sourceDirectory) {
 
         LOGGER.info("Class file: " + classNamePath.getFileName().toString());
 
-        ClassInfo classInfo = getFullClassName(classNamePath);
+        ClassInfo classInfo = getFullClassNameFromClassesDir(classesDirectory, classNamePath);
 
         if (classInfo == null) {
 
@@ -141,7 +141,7 @@ public class RestDocHandler {
         }
     }
 
-    private ClassInfo getFullClassName(final Path classNamePath) {
+    private ClassInfo getFullClassNameFromClassesDir(final File classesDirectory, final Path classNamePath) {
 
         String pathName;
         String className = "";
@@ -172,12 +172,13 @@ public class RestDocHandler {
                     className = pathName.substring(0, classIndex);
 
                     packetAndclassName.append(className);
+
                 } else {
 
                     packetAndclassName.append(pathName);
                     addDot = true;
                 }
-            } else if (pathName.equals("classes")) {
+            } else if (pathName.equals(classesDirectory.getName())) {
 
                 addPackageName = true;
             }
@@ -290,7 +291,7 @@ public class RestDocHandler {
 
             pathValue = annotation.value();
         }
-
+        
         ReturnInfo returnInfo = new ReturnInfo();
         MethodInfo methodInfo = new MethodInfo();
         methodInfo.setReturnInfo(returnInfo);
@@ -430,11 +431,6 @@ public class RestDocHandler {
 
         HashSet addDomainDataSet = new HashSet();
 
-//TODO remove
-if (className.equals("com.ncg.mobilebackend.domain.TicketType")) {
-
-    int i = 0;
-}
         DataModelInfo dataModelInfo = new DataModelInfo();
 
         try {
@@ -507,10 +503,10 @@ if (className.equals("com.ncg.mobilebackend.domain.TicketType")) {
 
                                     addDomainDataSet.add(fieldType);
 
-                                    if (enumTypes.contains(fieldType)) {
+                                    if (enumTypes.containsKey(fieldType)) {
 
                                         // Found enum in set
-                                        fieldInfo.setListOfType("enum");
+                                        fieldInfo.setListOfType("enum " + enumTypes.get(fieldType));
                                     }
                                 }
                             }

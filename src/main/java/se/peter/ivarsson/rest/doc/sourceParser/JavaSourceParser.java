@@ -7,6 +7,7 @@ package se.peter.ivarsson.rest.doc.sourceParser;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -14,6 +15,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
+import static se.peter.ivarsson.rest.doc.parser.RestDocHandler.restInfo;
 
 /**
  *
@@ -28,7 +30,7 @@ public class JavaSourceParser {
     private boolean javaDocReadingComments = false;
     private boolean javaDocEndReached = false;
 
-    public void parseClassForJavaDocComments(File sourceDiretory, HashMap<String, String> javaDocComments, String className) {
+    public void parseClassForJavaDocComments(final File sourceDiretory, final HashMap<String, String> javaDocComments, final String className) {
 
         // Starting point
         javaDocStartIndexOffset = -1;
@@ -53,7 +55,7 @@ public class JavaSourceParser {
         }
     }
 
-    private void parseFileForComments(String line, HashMap<String, String> javaDocComments, String className) {
+    private void parseFileForComments(final String line, final HashMap<String, String> javaDocComments, final String className) {
 
         if (javaDocStartIndexOffset < 0) {
 
@@ -95,7 +97,7 @@ public class JavaSourceParser {
         }
     }
 
-    private void findMethodNameAndAddToHashMap(String line, HashMap<String, String> javaDocComments, String className) {
+    private void findMethodNameAndAddToHashMap(final String line, final HashMap<String, String> javaDocComments, final String className) {
 
         int endMethodNameOffset = line.indexOf('(');
 
@@ -123,24 +125,26 @@ public class JavaSourceParser {
         }
     }
 
-    public void parseSourceFileForEnums(File sourceDiretory, HashSet<String> javaEnums, Path sourceFilePath) {
+    public void parseSourceFileForEnums(final File sourceDiretory, final HashMap<String,String> javaEnums, final Path sourceFilePath, final URLClassLoader urlClassLoader) {
 
         LOGGER.info(() -> "parseSourceFileForEnums(), Checking source file " + sourceFilePath + " for enums");
+
+        String enumListForClass = getEnumValuesFromClass(sourceDiretory, sourceFilePath, urlClassLoader);
 
         // Read file into stream
         try (Stream<String> stream = Files.lines(Paths.get(sourceFilePath.toString()))) {
 
             final Boolean[] isClass = new Boolean[1];
             isClass[0] = false;
-        
+
             stream.forEach(line -> {
-                
-                if(line.indexOf(" class ") != -1) {
-                    
+
+                if (line.indexOf(" class ") != -1) {
+
                     isClass[0] = true;
                 }
 
-                findEnumsInFile(line, javaEnums, sourceFilePath, isClass[0]);
+                findEnumsInFile(line, javaEnums, sourceFilePath, isClass[0], enumListForClass);
             });
 
         } catch (IOException ioe) {
@@ -149,49 +153,141 @@ public class JavaSourceParser {
         }
     }
 
-    private void findEnumsInFile(String line, HashSet<String> javaEnums, Path sourceFilePath, Boolean inClass) {
+    private void findEnumsInFile(final String line, final HashMap<String, String> javaEnums, final Path sourceFilePath, final Boolean inClass, final String enumListForClass) {
 
-                    // Search for public methods
-            int publicMethodOffset = line.indexOf("public ");
-            int startEnumOffset = line.indexOf(" enum ");
-            int endEnumOffset = line.indexOf('{');
+        // Search for public methods
+        int publicMethodOffset = line.indexOf("public ");
+        int startEnumOffset = line.indexOf(" enum ");
+        int endEnumOffset = line.indexOf('{');
 
-            if ((publicMethodOffset != -1) && (startEnumOffset != -1) && (endEnumOffset != -1)) {
+        if ((publicMethodOffset != -1) && (startEnumOffset != -1) && (endEnumOffset != -1)) {
 
-                // This is a public enum
-                String enumType = line.substring(startEnumOffset + 5, endEnumOffset).trim();
+            // This is a public enum
+            String enumType = line.substring(startEnumOffset + 5, endEnumOffset).trim();
 
-                String sourceFile = sourceFilePath.toString();
+            String sourceFile = sourceFilePath.toString();
 
-                int startSourcesFolderIndex = sourceFile.indexOf("/java/") + 6;
-                int endSourcesFolderIndex = sourceFile.indexOf(enumType, startSourcesFolderIndex);
+            int startSourcesFolderIndex = sourceFile.indexOf("/java/") + 6;
+            int endSourcesFolderIndex = sourceFile.indexOf(enumType, startSourcesFolderIndex);
 
-                if ((startSourcesFolderIndex != -1) && (endSourcesFolderIndex != -1)) {
+            if ((startSourcesFolderIndex != -1) && (endSourcesFolderIndex != -1)) {
 
-                    String enumTypeWithPath = null;
-                    
-                    if(inClass) {
-                        
-                        // Enum inside a class
-                        int endJavaSuffixIndex = sourceFile.indexOf(".java", startSourcesFolderIndex);
-                
-                        enumTypeWithPath = sourceFile.substring(startSourcesFolderIndex, endJavaSuffixIndex).replace('/', '.') + '$' + enumType;
-                        
-                    } else {
-                    
-                        // This is a public enum
-                        enumTypeWithPath = sourceFile.substring(startSourcesFolderIndex, endSourcesFolderIndex).replace('/', '.') + enumType;
-                    }
-                    
-                    javaEnums.add(enumTypeWithPath);
+                String enumTypeWithPath = null;
 
-                    LOGGER.info(() -> "findEnumsInFile(), Enum " + enumType + " found in file " + sourceFilePath);
+                if (inClass) {
+
+                    // Enum inside a class
+                    int endJavaSuffixIndex = sourceFile.indexOf(".java", startSourcesFolderIndex);
+
+                    enumTypeWithPath = sourceFile.substring(startSourcesFolderIndex, endJavaSuffixIndex).replace('/', '.') + '$' + enumType;
+
+                } else {
+
+                    // This is a public enum
+                    enumTypeWithPath = sourceFile.substring(startSourcesFolderIndex, endSourcesFolderIndex).replace('/', '.') + enumType;
+                }
+
+                javaEnums.put(enumTypeWithPath, enumListForClass);
+
+                LOGGER.info(() -> "findEnumsInFile(), Enum " + enumType + " found in file " + sourceFilePath);
+            }
+        }
+    }
+
+    public String getEnumValuesFromClass(final File sourceDiretory, final Path sourceFilePath, final URLClassLoader urlClassLoader) {
+
+        LOGGER.info(() -> "getEnumValues(), Checking class " + sourceFilePath + " for enums");
+
+        StringBuilder enumList = new StringBuilder();
+
+        String className = null;
+
+        try {
+
+            className = getFullClassNameFromSourcesDir(sourceDiretory, sourceFilePath);
+
+            Class clazz = urlClassLoader.loadClass(className);
+
+            if (clazz.isEnum()) {
+
+                Object[] enums = clazz.getEnumConstants();
+
+                for (int i = 0; i < enums.length; i++) {
+
+                    enumList.append(enums[i].toString());
+                    enumList.append(", ");
+                }
+
+                if (enums.length > 0) {
+
+                    int lastIndex = enumList.lastIndexOf(", ");
+
+                    enumList.delete(lastIndex, lastIndex + 2);
                 }
             }
+        } catch (ClassNotFoundException cnfe) {
+
+            LOGGER.severe("getEnumValues() in class " + className + ", ClassNotFoundException: " + cnfe.getMessage());
+            return "";
+
+        } catch (NoClassDefFoundError ncdfe) {
+
+            LOGGER.severe("getEnumValues, NoClassDefFoundError: " + ncdfe.getMessage());
+            return "";
+        }
+    
+        return enumList.toString();
     }
 
     private String getSourceFileNameFromClassName(File sourceDiretory, String className) {
 
         return sourceDiretory.getAbsolutePath() + "/" + className.replaceAll("[.]", "/") + ".java";
     }
+
+    private String getFullClassNameFromSourcesDir(final File sourceDiretory, final Path sourceNamePath) {
+
+        String pathName;
+        String className = "";
+        int classIndex;
+        
+        StringBuilder packetAndclassName = new StringBuilder();
+
+        boolean addDot = false;
+        boolean addPackageName = false;
+
+        int pathCount = sourceNamePath.getNameCount();
+
+        for (int i = 0; i < pathCount; i++) {
+
+            if (addDot == true) {
+
+                packetAndclassName.append(".");
+            }
+
+            pathName = sourceNamePath.getName(i).toString();
+
+            if (addPackageName == true) {
+
+                classIndex = pathName.indexOf(".java");
+
+                if (classIndex > 0) {
+
+                    className = pathName.substring(0, classIndex);
+
+                    packetAndclassName.append(className);
+
+                } else {
+
+                    packetAndclassName.append(pathName);
+                    addDot = true;
+                }
+            } else if (pathName.equals(sourceDiretory.getName())) {
+
+                addPackageName = true;
+            }
+        }
+
+        return packetAndclassName.toString();
+    }
+
 }
