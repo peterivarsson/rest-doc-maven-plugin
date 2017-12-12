@@ -5,12 +5,13 @@
 It parses the classes and sources files for JAX-RS Annotation and JavaDoc comments.
 It creates a index.html file in "output" directory.
 
-## plugin configuration
+## Plugin configuration
 
 You need to config all 4 directories in your pom.xml (classesDirectory, sourcesDirectory, outputDirectory and loggingDirectory)
 
 Put below configurations in your pom.xml, and modify the paths for your needs.
 
+```
 <plugin>
     <groupId>rest.doc.plugin</groupId>
     <artifactId>rest-doc-maven-plugin</artifactId>
@@ -31,3 +32,4 @@ Put below configurations in your pom.xml, and modify the paths for your needs.
         </execution>
     </executions>
 </plugin>
+```
