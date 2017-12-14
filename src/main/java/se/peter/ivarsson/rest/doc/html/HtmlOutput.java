@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.logging.Logger;
 import se.peter.ivarsson.rest.doc.parser.ClassInfo;
 import se.peter.ivarsson.rest.doc.parser.FieldInfo;
+import se.peter.ivarsson.rest.doc.parser.MehodInfoComparator;
 
 import se.peter.ivarsson.rest.doc.parser.MethodInfo;
 import se.peter.ivarsson.rest.doc.parser.ParameterInfo;
@@ -185,7 +186,8 @@ public class HtmlOutput {
 
         LOGGER.info("htmlRestResourceDetail() resourceType = " + resourceType);
 
-        RestDocHandler.restInfo.getClassInfo().stream().forEach((res) -> {
+        RestDocHandler.restInfo.getClassInfo().stream()
+                .forEach((res) -> {
 
             if (res.getClassName().equals(resourceType)) {
 
@@ -200,6 +202,8 @@ public class HtmlOutput {
                 }
             }
         });
+        
+        methodInfoList.sort(new MehodInfoComparator());
 
         methodNumber = 1;
 
@@ -313,7 +317,7 @@ public class HtmlOutput {
 
         htmlBuffer.append("\r\r\t\tJAX-RS Response");
 
-        htmlBuffer.append("<BR><BR>\r\r\t\t<table>\r\t\t\t<tr><td>Element</td><td>Media Type</td></tr>");
+        htmlBuffer.append("<BR><BR>\r\r\t\t<table>\r\t\t\t<tr><td>Element</td><td>Media Type</td><td>Default Status Code</td></tr>");
 
         htmlBuffer.append("\r\t\t\t<tr><td>");
 
@@ -365,6 +369,17 @@ public class HtmlOutput {
         htmlBuffer.append("</td><td>");
 
         htmlBuffer.append(methodInfo.getProducesType());
+
+        htmlBuffer.append("</td><td>");
+
+        if(methodInfo.getReturnInfo().getReturnStatus() == null) {
+            
+            htmlBuffer.append('-');
+            
+        } else {
+            
+            htmlBuffer.append(methodInfo.getReturnInfo().getReturnStatus());
+        }
 
         htmlBuffer.append("</td>\r\t\t\t</tr>\r\t\t</table><BR>");
     }

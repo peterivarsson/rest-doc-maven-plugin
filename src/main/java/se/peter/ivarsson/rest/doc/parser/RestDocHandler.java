@@ -39,7 +39,7 @@ public class RestDocHandler {
 
     private final HashMap<String, String> javaDocComments = new HashMap<>();
     private final HashMap<String, String> enumTypes = new HashMap<>();
-    private final HashMap<String, String> responseTypes = new HashMap<>();
+    private final HashMap<String, ResponseType> responseTypes = new HashMap<>();
 
     public static RestInfo restInfo = new RestInfo();
 
@@ -404,10 +404,18 @@ public class RestDocHandler {
         String responseTypesKey = className + '-' + method.getName();
 
         if (responseTypes.containsKey(responseTypesKey)) {
+            
+            ResponseType responseType = responseTypes.get(responseTypesKey);
 
-            returnTypeName = responseTypes.get(responseTypesKey);
-
+            returnTypeName = responseType.getReturnType();
+            
+            if( returnTypeName == null) {
+                
+                returnTypeName = method.getReturnType().getName();
+            }
+                
             returnInfo.setReturnClassName(returnTypeName);
+            returnInfo.setReturnStatus(responseType.getReturnStatus());
 
         } else {
 

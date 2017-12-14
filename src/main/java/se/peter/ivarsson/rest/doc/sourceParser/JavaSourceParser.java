@@ -14,6 +14,8 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
+import se.peter.ivarsson.rest.doc.parser.ResponseType;
+import sun.reflect.generics.tree.ReturnType;
 
 /**
  *
@@ -131,7 +133,7 @@ public class JavaSourceParser {
         }
     }
 
-    public void parseSourceFile(final File sourceDiretory, final HashMap<String, String> javaEnums, final HashMap<String, String> responseTypes, final Path sourceFilePath, final URLClassLoader urlClassLoader) {
+    public void parseSourceFile(final File sourceDiretory, final HashMap<String, String> javaEnums, final HashMap<String, ResponseType> responseTypes, final Path sourceFilePath, final URLClassLoader urlClassLoader) {
 
         LOGGER.info(() -> "parseSourceFile(), Checking source file " + sourceFilePath + " for enums and response types");
 
@@ -169,7 +171,7 @@ public class JavaSourceParser {
         }
     }
 
-    private void findEnumsInFile(final String line, final HashMap<String, String> javaEnums, final Path sourceFilePath, 
+    private void findEnumsInFile(final String line, final HashMap<String, String> javaEnums, final Path sourceFilePath,
             final Boolean inClass, final String enumListForClass) {
 
         // Search for enum in public methods
@@ -211,7 +213,7 @@ public class JavaSourceParser {
         }
     }
 
-    private void findResponseOkType(final String line, final HashMap<String, String> responseTypes, final String className) {
+    private void findResponseOkType(final String line, final HashMap<String, ResponseType> responseTypes, final String className) {
 
         if (pathAnnotationFound == false) {
 
@@ -243,56 +245,75 @@ public class JavaSourceParser {
 
             // Search for real 'Response.ok('
             int returnOffset = line.indexOf("return");
-            int responseOkOffset = line.indexOf("Response.ok", returnOffset);
+            int responseOffset = line.indexOf("Response", returnOffset);
+            int responseOkOffset = line.indexOf(".ok", responseOffset);
 
-            if ((returnOffset != -1) && (responseOkOffset != -1)) {
+            if ((returnOffset != -1) && (responseOffset != -1)) {
 
-                int responseOkStartOffset = line.indexOf("(", responseOkOffset);
+                String responseTypeKey = className + "-" + responseMethodName;
 
-                if (responseOkStartOffset != -1) {
+                if (responseOkOffset != -1) {
 
-                    // Get Response OK variable name
-                    int responseOkEndOffset = line.indexOf(")", responseOkStartOffset);
+                    // Http status OK
+                    int responseOkStartOffset = line.indexOf("(", responseOkOffset);
 
-                    if (responseOkEndOffset != -1) {
+                    if (responseOkStartOffset != -1) {
 
-                        int newOffset = line.indexOf("new ");
+                        // Get Response OK variable name
+                        int responseOkEndOffset = line.indexOf(")", responseOkStartOffset);
 
-                        if (newOffset == -1) {
+                        if (responseOkEndOffset != -1) {
 
-                            // We don't want any new objects
-                            String variableName = line.substring(responseOkStartOffset + 1, responseOkEndOffset).trim();
+                            int newOffset = line.indexOf("new ");
 
-                            if (variableTypes.containsKey(variableName)) {
+                            if (newOffset == -1) {
 
-                                String variableType = variableTypes.get(variableName);
+                                // We don't want any new objects
+                                String variableName = line.substring(responseOkStartOffset + 1, responseOkEndOffset).trim();
 
-                                int listIndex = variableType.indexOf("List<");
+                                if (variableTypes.containsKey(variableName)) {
 
-                                if (listIndex == -1) {
+                                    ResponseType responseType = new ResponseType();
+                                    responseType.setReturnStatus("OK");
 
-                                    // No list
-                                    if (importClasses.containsKey(variableTypes.get(variableName))) {
+                                    String variableType = variableTypes.get(variableName);
 
-                                        responseTypes.put(className + "-" + responseMethodName, importClasses.get(variableTypes.get(variableName)));
-                                    }
-                                } else {
+                                    int listIndex = variableType.indexOf("List<");
 
-                                    String listType = variableType.substring(listIndex + 5, variableType.length() - 1);
+                                    if (listIndex == -1) {
 
-                                    if (importClasses.containsKey(listType)) {
+                                        // No list
+                                        if (importClasses.containsKey(variableTypes.get(variableName))) {
 
-                                        responseTypes.put(className + "-" + responseMethodName, "List<" + importClasses.get(listType) + ">");
+                                            responseType.setReturnType(importClasses.get(variableTypes.get(variableName)));
+
+                                            responseTypes.put(responseTypeKey, responseType);
+                                        }
+                                    } else {
+
+                                        String listType = variableType.substring(listIndex + 5, variableType.length() - 1);
+
+                                        if (importClasses.containsKey(listType)) {
+
+                                            responseType.setReturnType("List<" + importClasses.get(listType) + ">");
+
+                                            responseTypes.put(responseTypeKey, responseType);
+                                        }
                                     }
                                 }
                             }
-
-                            // We have found an Response Type
-                            pathAnnotationFound = false;
-                            publicReponseFound = false;
                         }
                     }
+                } else {
+
+                    // Http status thas is NOT OK
+                    findOutHttpStatusCode(line, responseOffset, responseTypeKey, responseTypes);
                 }
+
+                // We have found an return Response Type
+                pathAnnotationFound = false;
+                publicReponseFound = false;
+
             } else {
 
                 // Response.ok not found
@@ -300,6 +321,75 @@ public class JavaSourceParser {
                 addVariableAndTypeToHashList(line);
             }
         }
+    }
+
+    private void findOutHttpStatusCode(final String line, final int responseOffset, final String responseTypeKey,
+            final HashMap<String, ResponseType> responseTypes) {
+
+        String status = "";
+
+        int responseDotOffset = line.indexOf(".", responseOffset);
+        int responseParenthesesStartOffset = line.indexOf("(", responseDotOffset);
+
+        if ((responseDotOffset != -1) && (responseDotOffset != -1)) {
+
+            ResponseType responseType = new ResponseType();
+
+            String httpStatusMethod = line.substring(responseOffset + 9, responseParenthesesStartOffset);
+
+            switch (httpStatusMethod) {
+
+                case "accepted":
+                    responseType.setReturnStatus("ACCEPTED");
+                    break;
+
+                case "noContent":
+                    responseType.setReturnStatus("NO_CONTENT");
+                    break;
+
+                case "notAcceptable":
+                    responseType.setReturnStatus("NOT_ACCEPTABLE");
+                    break;
+
+                case "notModified":
+                    responseType.setReturnStatus("NOT_MODIFIED");
+                    break;
+
+                case "ok":
+                    responseType.setReturnStatus("OK");
+                    break;
+
+                case "serverError":
+                    responseType.setReturnStatus("INTERNAL_SERVER_ERROR");
+                    break;
+
+                case "status":
+                    responseType.setReturnStatus(parseHttpStatusFromStatusMethod(line, responseParenthesesStartOffset));
+                    break;
+
+                default:
+                    break;
+            }
+
+            responseTypes.put(responseTypeKey, responseType);
+        }
+    }
+
+    private String parseHttpStatusFromStatusMethod(final String line, final int responseParenthesesStartOffset) {
+
+        int statusStatusCodeBeginningOffset = line.indexOf("Response.Status.", responseParenthesesStartOffset);
+
+        if (statusStatusCodeBeginningOffset != -1) {
+
+            int responseParenthesesEndOffset = line.indexOf(")", statusStatusCodeBeginningOffset);
+
+            if (responseParenthesesEndOffset != -1) {
+
+                return  line.substring(statusStatusCodeBeginningOffset + 16, responseParenthesesEndOffset).trim();
+            }
+        }
+        
+        return null;
     }
 
     private void addVariableAndTypeToHashList(final String line) {
