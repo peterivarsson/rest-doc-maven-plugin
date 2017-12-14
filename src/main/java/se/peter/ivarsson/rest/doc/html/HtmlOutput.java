@@ -267,7 +267,7 @@ public class HtmlOutput {
             htmlBuffer.append("</td></tr>");
         }
 
-        htmlBuffer.append("\r\t\t\t<tr><td>Class</td><td>Name</td><td>Parameter type</td></tr>");
+        htmlBuffer.append("\r\t\t\t<tr><td>Name</td><td>Class</td><td>Parameter type</td></tr>");
 
         List<ParameterInfo> parameterInfoList = methodInfo.getParameterInfo();
 
@@ -311,7 +311,7 @@ public class HtmlOutput {
 
         htmlBuffer.append("\r\t\t</table><BR>");
 
-        htmlBuffer.append("\r\r\t\tResponse Body");
+        htmlBuffer.append("\r\r\t\tJAX-RS Response");
 
         htmlBuffer.append("<BR><BR>\r\r\t\t<table>\r\t\t\t<tr><td>Element</td><td>Media Type</td></tr>");
 
@@ -328,12 +328,29 @@ public class HtmlOutput {
             if (isDomainData(methodInfo.getReturnInfo().getReturnClassName())) {
 
                 // Domain data
-                htmlBuffer.append("\r\t\t<a href=./");
-                htmlBuffer.append(methodInfo.getReturnInfo().getReturnClassName());
-                htmlBuffer.append(".html>");
-                htmlBuffer.append(methodInfo.getReturnInfo().getReturnClassName());
-                htmlBuffer.append("</a>");
+                String returnClassName = methodInfo.getReturnInfo().getReturnClassName();
+                int listIndex = returnClassName.indexOf("List<");
 
+                if (listIndex == -1) {
+
+                    // Not a List<>
+                    htmlBuffer.append("\r\t\t<a href=./");
+                    htmlBuffer.append(methodInfo.getReturnInfo().getReturnClassName());
+                    htmlBuffer.append(".html>");
+                    htmlBuffer.append(methodInfo.getReturnInfo().getReturnClassName());
+                    htmlBuffer.append("</a>");
+
+                } else {
+
+                    // Is a List<>
+                    String listType = returnClassName.substring(listIndex + 5, returnClassName.length() - 1);
+
+                    htmlBuffer.append("\r\t\tList&lt;<a href=./");
+                    htmlBuffer.append(listType);
+                    htmlBuffer.append(".html>");
+                    htmlBuffer.append(listType);
+                    htmlBuffer.append("</a>&gt;");
+                }
             } else {
 
                 // Annotated ReturnType Domain data
@@ -398,12 +415,12 @@ public class HtmlOutput {
 
         htmlBuffer.append("\r\r\t\t<table>");
 
-        if( RestDocHandler.restInfo.getDomainDataMap().get(domainDataType).getInfo() != null ) {
-            
+        if (RestDocHandler.restInfo.getDomainDataMap().get(domainDataType).getInfo() != null) {
+
             htmlBuffer.append("\r\t\t\t<tr><td colspan=3>" + RestDocHandler.restInfo.getDomainDataMap().get(domainDataType).getInfo() + "</td></tr>");
             htmlBuffer.append("\r\t\t\t<tr><td colspan=3></td></tr>");
         }
-                
+
         htmlBuffer.append("\r\t\t\t<tr><td>Field name</td><td>Field type</td><td>Type in list</td></tr>");
 
         fields.stream().forEach((field) -> {

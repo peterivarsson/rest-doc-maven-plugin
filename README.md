@@ -2,7 +2,7 @@
 
 ## What does this Maven plugin do
 
-It parses the classes and sources files for JAX-RS Annotation and JavaDoc comments.
+It parses the classes and sources files for JAX-RS Annotations and JavaDoc comments.
 It creates a index.html file in "output" directory.
 
 ## Plugin configuration

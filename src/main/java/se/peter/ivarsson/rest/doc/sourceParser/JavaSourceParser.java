@@ -12,10 +12,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
-import static se.peter.ivarsson.rest.doc.parser.RestDocHandler.restInfo;
 
 /**
  *
@@ -25,10 +23,18 @@ public class JavaSourceParser {
 
     private static final Logger LOGGER = Logger.getLogger(JavaSourceParser.class.getSimpleName());
 
+    // JavaDoc parsing
     private int javaDocStartIndexOffset = -1;
     private StringBuilder javaDocComment = null;
     private boolean javaDocReadingComments = false;
     private boolean javaDocEndReached = false;
+
+    // Respose type parsing
+    private final HashMap<String, String> importClasses = new HashMap<>();
+    private final HashMap<String, String> variableTypes = new HashMap<>();
+    private boolean pathAnnotationFound = false;
+    private boolean publicReponseFound = false;
+    private String responseMethodName = "";
 
     public void parseClassForJavaDocComments(final File sourceDiretory, final HashMap<String, String> javaDocComments, final String className) {
 
@@ -125,11 +131,17 @@ public class JavaSourceParser {
         }
     }
 
-    public void parseSourceFileForEnums(final File sourceDiretory, final HashMap<String,String> javaEnums, final Path sourceFilePath, final URLClassLoader urlClassLoader) {
+    public void parseSourceFile(final File sourceDiretory, final HashMap<String, String> javaEnums, final HashMap<String, String> responseTypes, final Path sourceFilePath, final URLClassLoader urlClassLoader) {
 
-        LOGGER.info(() -> "parseSourceFileForEnums(), Checking source file " + sourceFilePath + " for enums");
+        LOGGER.info(() -> "parseSourceFile(), Checking source file " + sourceFilePath + " for enums and response types");
 
-        String enumListForClass = getEnumValuesFromClass(sourceDiretory, sourceFilePath, urlClassLoader);
+        importClasses.clear();
+        pathAnnotationFound = false;
+        publicReponseFound = false;
+
+        String className = getFullClassNameFromSourcesDir(sourceDiretory, sourceFilePath);
+
+        String enumListForClass = getEnumValuesFromClass(className, urlClassLoader);
 
         // Read file into stream
         try (Stream<String> stream = Files.lines(Paths.get(sourceFilePath.toString()))) {
@@ -144,18 +156,23 @@ public class JavaSourceParser {
                     isClass[0] = true;
                 }
 
+                addImportStatementToMap(line);
+
                 findEnumsInFile(line, javaEnums, sourceFilePath, isClass[0], enumListForClass);
+
+                findResponseOkType(line, responseTypes, className);
             });
 
         } catch (IOException ioe) {
 
-            LOGGER.severe(() -> "parseSourceFileForEnums(), IOException: " + ioe.getMessage() + ", Can't find file: " + sourceFilePath);
+            LOGGER.severe(() -> "parseSourceFile(), IOException: " + ioe.getMessage() + ", Can't find file: " + sourceFilePath);
         }
     }
 
-    private void findEnumsInFile(final String line, final HashMap<String, String> javaEnums, final Path sourceFilePath, final Boolean inClass, final String enumListForClass) {
+    private void findEnumsInFile(final String line, final HashMap<String, String> javaEnums, final Path sourceFilePath, 
+            final Boolean inClass, final String enumListForClass) {
 
-        // Search for public methods
+        // Search for enum in public methods
         int publicMethodOffset = line.indexOf("public ");
         int startEnumOffset = line.indexOf(" enum ");
         int endEnumOffset = line.indexOf('{');
@@ -194,17 +211,126 @@ public class JavaSourceParser {
         }
     }
 
-    public String getEnumValuesFromClass(final File sourceDiretory, final Path sourceFilePath, final URLClassLoader urlClassLoader) {
+    private void findResponseOkType(final String line, final HashMap<String, String> responseTypes, final String className) {
 
-        LOGGER.info(() -> "getEnumValues(), Checking class " + sourceFilePath + " for enums");
+        if (pathAnnotationFound == false) {
+
+            // Search for enum in public methods
+            int pathAnnotationOffset = line.indexOf("@Path");
+            int pathParamAnnotationOffset = line.indexOf("PathParam");
+
+            if ((pathAnnotationOffset != -1) && (pathParamAnnotationOffset == -1)) {
+
+                pathAnnotationFound = true;
+                publicReponseFound = false;
+            }
+            return; //  No path found yet
+        }
+
+        if (publicReponseFound == false) {
+
+            int publicMethodOffset = line.indexOf("public ");
+            int responseOffset = line.indexOf("Response ", publicMethodOffset);
+            int methodEndOffset = line.indexOf('(', responseOffset);
+
+            if ((publicMethodOffset != -1) && (responseOffset != -1) && (methodEndOffset != -1)) {
+
+                publicReponseFound = true;
+                responseMethodName = line.substring(responseOffset + 9, methodEndOffset).trim();
+                variableTypes.clear();
+            }
+        } else {
+
+            // Search for real 'Response.ok('
+            int returnOffset = line.indexOf("return");
+            int responseOkOffset = line.indexOf("Response.ok", returnOffset);
+
+            if ((returnOffset != -1) && (responseOkOffset != -1)) {
+
+                int responseOkStartOffset = line.indexOf("(", responseOkOffset);
+
+                if (responseOkStartOffset != -1) {
+
+                    // Get Response OK variable name
+                    int responseOkEndOffset = line.indexOf(")", responseOkStartOffset);
+
+                    if (responseOkEndOffset != -1) {
+
+                        int newOffset = line.indexOf("new ");
+
+                        if (newOffset == -1) {
+
+                            // We don't want any new objects
+                            String variableName = line.substring(responseOkStartOffset + 1, responseOkEndOffset).trim();
+
+                            if (variableTypes.containsKey(variableName)) {
+
+                                String variableType = variableTypes.get(variableName);
+
+                                int listIndex = variableType.indexOf("List<");
+
+                                if (listIndex == -1) {
+
+                                    // No list
+                                    if (importClasses.containsKey(variableTypes.get(variableName))) {
+
+                                        responseTypes.put(className + "-" + responseMethodName, importClasses.get(variableTypes.get(variableName)));
+                                    }
+                                } else {
+
+                                    String listType = variableType.substring(listIndex + 5, variableType.length() - 1);
+
+                                    if (importClasses.containsKey(listType)) {
+
+                                        responseTypes.put(className + "-" + responseMethodName, "List<" + importClasses.get(listType) + ">");
+                                    }
+                                }
+                            }
+
+                            // We have found an Response Type
+                            pathAnnotationFound = false;
+                            publicReponseFound = false;
+                        }
+                    }
+                }
+            } else {
+
+                // Response.ok not found
+                // Save all variables in the variableTypes HashList
+                addVariableAndTypeToHashList(line);
+            }
+        }
+    }
+
+    private void addVariableAndTypeToHashList(final String line) {
+
+        int equalsOffset = line.indexOf("=");
+        int equalityOperatorsOffset = line.indexOf("==");
+
+        if ((equalsOffset != -1) && (equalityOperatorsOffset == -1)) {
+
+            String[] variableList = line.substring(0, equalsOffset).split("\\s+");
+
+            if (variableList.length >= 2) {
+
+                String variableName = variableList[variableList.length - 1];
+                String variableType = variableList[variableList.length - 2];
+
+                if (!variableType.isEmpty()) {
+
+                    variableTypes.put(variableName, variableType);
+                }
+            }
+        }
+    }
+
+    private String getEnumValuesFromClass(final String className, final URLClassLoader urlClassLoader) {
+
+        LOGGER.info(() -> "getEnumValuesFromClass(), Checking class " + className + " for enums");
 
         StringBuilder enumList = new StringBuilder();
 
-        String className = null;
-
         try {
-
-            className = getFullClassNameFromSourcesDir(sourceDiretory, sourceFilePath);
 
             Class clazz = urlClassLoader.loadClass(className);
 
@@ -227,16 +353,37 @@ public class JavaSourceParser {
             }
         } catch (ClassNotFoundException cnfe) {
 
-            LOGGER.severe("getEnumValues() in class " + className + ", ClassNotFoundException: " + cnfe.getMessage());
+            LOGGER.severe("getEnumValuesFromClass() in class " + className + ", ClassNotFoundException: " + cnfe.getMessage());
             return "";
 
         } catch (NoClassDefFoundError ncdfe) {
 
-            LOGGER.severe("getEnumValues, NoClassDefFoundError: " + ncdfe.getMessage());
+            LOGGER.severe("getEnumValuesFromClass() in class " + className + ", NoClassDefFoundError: " + ncdfe.getMessage());
             return "";
         }
-    
+
         return enumList.toString();
+    }
+
+    private void addImportStatementToMap(final String line) {
+
+        int importOffset = line.indexOf("import");
+
+        if (importOffset != -1) {
+
+            // This is a import row
+            int lastDot = line.lastIndexOf('.');
+
+            if (lastDot != -1) {
+
+                int importEndOffset = line.indexOf(';', lastDot);
+
+                if (importEndOffset != -1) {
+
+                    importClasses.put(line.substring(lastDot + 1, importEndOffset), line.substring(importOffset + 6, importEndOffset).trim());
+                }
+            }
+        }
     }
 
     private String getSourceFileNameFromClassName(File sourceDiretory, String className) {
@@ -249,7 +396,7 @@ public class JavaSourceParser {
         String pathName;
         String className = "";
         int classIndex;
-        
+
         StringBuilder packetAndclassName = new StringBuilder();
 
         boolean addDot = false;
@@ -289,5 +436,4 @@ public class JavaSourceParser {
 
         return packetAndclassName.toString();
     }
-
 }

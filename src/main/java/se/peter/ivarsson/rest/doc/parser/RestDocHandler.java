@@ -39,6 +39,7 @@ public class RestDocHandler {
 
     private final HashMap<String, String> javaDocComments = new HashMap<>();
     private final HashMap<String, String> enumTypes = new HashMap<>();
+    private final HashMap<String, String> responseTypes = new HashMap<>();
 
     public static RestInfo restInfo = new RestInfo();
 
@@ -71,7 +72,7 @@ public class RestDocHandler {
 
                         if (path.toString().endsWith(".java")) {
 
-                            javaSourceParser.parseSourceFileForEnums(sourceDirectory, enumTypes, path, urlClassLoader);
+                            javaSourceParser.parseSourceFile(sourceDirectory, enumTypes, responseTypes, path, urlClassLoader);
                         }
                     });
 
@@ -291,7 +292,7 @@ public class RestDocHandler {
 
             pathValue = annotation.value();
         }
-        
+
         ReturnInfo returnInfo = new ReturnInfo();
         MethodInfo methodInfo = new MethodInfo();
         methodInfo.setReturnInfo(returnInfo);
@@ -302,7 +303,7 @@ public class RestDocHandler {
         classInfo.getMethodInfo().add(methodInfo);
 
         addMethodsPathMethod(methodInfo, returnInfo, method);
-        addMethodReturnType(returnInfo, method);
+        addMethodReturnType(returnInfo, method, classInfo.getPackageAndClassName());
         addMethodParameters(methodInfo, method);
 
         String javaDocMethodComments = javaDocComments.get(method.getName());
@@ -397,11 +398,23 @@ public class RestDocHandler {
         }
     }
 
-    private void addMethodReturnType(final ReturnInfo returnInfo, final Method method) {
+    private void addMethodReturnType(final ReturnInfo returnInfo, final Method method, final String className) {
 
-        String returnTypeName = method.getReturnType().getName();
+        String returnTypeName = null;
+        String responseTypesKey = className + '-' + method.getName();
 
-        returnInfo.setReturnClassName(returnTypeName);
+        if (responseTypes.containsKey(responseTypesKey)) {
+
+            returnTypeName = responseTypes.get(responseTypesKey);
+
+            returnInfo.setReturnClassName(returnTypeName);
+
+        } else {
+
+            returnTypeName = method.getReturnType().getName();
+
+            returnInfo.setReturnClassName(returnTypeName);
+        }
 
         if (isDomainData(returnTypeName)) {
 
@@ -416,10 +429,26 @@ public class RestDocHandler {
         addDomainDataInfo(returnTypeClassName);
     }
 
-    private DataModelInfo addDomainDataInfo(final String className) {
+    private DataModelInfo addDomainDataInfo(String className) {
 
+        int listStartIndex = className.indexOf("List<");
+
+        if (listStartIndex != -1) {
+
+            int listEndIndex = className.indexOf(">", listStartIndex);
+
+            if (listEndIndex != -1) {
+
+                className = className.substring(listStartIndex + 5, listEndIndex).trim();
+            }
+        }
+        
         DataModelInfo domainData = restInfo.getDomainDataMap().get(className);
 
+//TODO remove
+if(className.endsWith("ShowStaticInfo")){
+    int i=0;
+}
         if (domainData != null) {
 
             // This data already exists
@@ -460,10 +489,10 @@ public class RestDocHandler {
                             startIndex = 2;
                         }
 
-                        char c[] = method.getName().substring(startIndex).toCharArray();
-                        c[0] = Character.toLowerCase(c[0]);
+                        char fieldName[] = method.getName().substring(startIndex).toCharArray();
+                        fieldName[0] = Character.toLowerCase(fieldName[0]);
 
-                        fieldInfo.setFieldName(new String(c));
+                        fieldInfo.setFieldName(new String(fieldName));
                         fieldInfo.setFieldType(fieldType);
 
                         for (Annotation annotation : method.getAnnotations()) {
@@ -525,10 +554,17 @@ public class RestDocHandler {
             }
 
             if (dataModelInfo.getFields().isEmpty()) {
-            
-                dataModelInfo.setInfo("No fields found in this class");
+
+                if (enumTypes.containsKey(className)) {
+
+                    dataModelInfo.setInfo("enum " + enumTypes.get(className));
+
+                } else {
+
+                    dataModelInfo.setInfo("No fields found in this class");
+                }
             }
-            
+
             restInfo.getDomainDataMap().put(className, dataModelInfo);
 
             addDomainDataSet.stream()
@@ -542,7 +578,7 @@ public class RestDocHandler {
             LOGGER.severe("addDomainDataInfo, ClassNotFoundException: " + cnfe.getMessage());
 
             return null;
-            
+
         } catch (NoClassDefFoundError ncdfe) {
 
             LOGGER.severe("addDomainDataInfo, NoClassDefFoundError: " + ncdfe.getMessage());
