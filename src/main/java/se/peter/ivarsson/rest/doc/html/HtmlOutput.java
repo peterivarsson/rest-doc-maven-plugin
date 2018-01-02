@@ -89,7 +89,9 @@ public class HtmlOutput {
                     htmlBuffer.append(res.getPackageAndClassName());
                     htmlBuffer.append(".html>");
                     htmlBuffer.append(res.getClassName());
-                    htmlBuffer.append("</a></li>\r\t\t<BR>");
+                    htmlBuffer.append("</a> ");
+                    htmlBuffer.append(res.getClassRootPath());
+                    htmlBuffer.append("</li>\r\t\t<BR>");
                 });
 
         htmlBuffer.append("\r\t</ul>");

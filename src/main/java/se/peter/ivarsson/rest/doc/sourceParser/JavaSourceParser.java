@@ -14,8 +14,8 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
+import se.peter.ivarsson.rest.doc.parser.PathInfo;
 import se.peter.ivarsson.rest.doc.parser.ResponseType;
-import sun.reflect.generics.tree.ReturnType;
 
 /**
  *
@@ -31,12 +31,24 @@ public class JavaSourceParser {
     private boolean javaDocReadingComments = false;
     private boolean javaDocEndReached = false;
 
-    // Respose type parsing
+    // Used in 'Respose type' and 'Class path'
     private final HashMap<String, String> importClasses = new HashMap<>();
-    private final HashMap<String, String> variableTypes = new HashMap<>();
-    private boolean pathAnnotationFound = false;
-    private boolean publicReponseFound = false;
-    private String responseMethodName = "";
+
+    // Respose type parsing
+    private final HashMap<String, String> responseTypeVariableTypes = new HashMap<>();
+    private boolean responseTypeAnnotationFound = false;
+    private boolean responseTypePublicReponseFound = false;
+    private String responseTypeResponseMethodName = "";
+
+    // Class path parsing
+    private boolean classPathAnnotationFound = false;
+//TODO remove
+//    private boolean classPathInfoAdded = false;
+    private String classPathTemporary = "";
+    private String classPath = "";
+
+    // Constants parsing
+    private boolean isClass = false;
 
     public void parseClassForJavaDocComments(final File sourceDiretory, final HashMap<String, String> javaDocComments, final String className) {
 
@@ -133,13 +145,23 @@ public class JavaSourceParser {
         }
     }
 
-    public void parseSourceFile(final File sourceDiretory, final HashMap<String, String> javaEnums, final HashMap<String, ResponseType> responseTypes, final Path sourceFilePath, final URLClassLoader urlClassLoader) {
+    public void parseSourceFile(final File sourceDiretory, final HashMap<String, String> javaEnums,
+            final HashMap<String, ResponseType> responseTypes, final HashMap<String, PathInfo> classPaths,
+            final HashMap<String, String> constants, final Path sourceFilePath, final URLClassLoader urlClassLoader) {
 
         LOGGER.info(() -> "parseSourceFile(), Checking source file " + sourceFilePath + " for enums and response types");
 
         importClasses.clear();
-        pathAnnotationFound = false;
-        publicReponseFound = false;
+        responseTypeAnnotationFound = false;
+        responseTypePublicReponseFound = false;
+
+        classPathAnnotationFound = false;
+//TODO remove
+//        classPathInfoAdded = false;
+        classPathTemporary = "";
+        classPath = "";
+
+        isClass = false;
 
         String className = getFullClassNameFromSourcesDir(sourceDiretory, sourceFilePath);
 
@@ -163,6 +185,12 @@ public class JavaSourceParser {
                 findEnumsInFile(line, javaEnums, sourceFilePath, isClass[0], enumListForClass);
 
                 findResponseOkType(line, responseTypes, className);
+
+                findClassPaths(line, classPaths, className);
+
+//TODO remove
+//                addClassPathIfNeeded(classPaths, className);
+                findConstants(line, constants, className);
             });
 
         } catch (IOException ioe) {
@@ -215,31 +243,26 @@ public class JavaSourceParser {
 
     private void findResponseOkType(final String line, final HashMap<String, ResponseType> responseTypes, final String className) {
 
-        if (pathAnnotationFound == false) {
+        if (responseTypeAnnotationFound == false) {
 
             // Search for enum in public methods
-            int pathAnnotationOffset = line.indexOf("@Path");
-            int pathParamAnnotationOffset = line.indexOf("PathParam");
+            if (isPathAnnotation(line) != -1) {
 
-            if ((pathAnnotationOffset != -1) && (pathParamAnnotationOffset == -1)) {
-
-                pathAnnotationFound = true;
-                publicReponseFound = false;
+                responseTypeAnnotationFound = true;
+                responseTypePublicReponseFound = false;
             }
             return; //  No path found yet
         }
 
-        if (publicReponseFound == false) {
+        if (responseTypePublicReponseFound == false) {
 
-            int publicMethodOffset = line.indexOf("public ");
-            int responseOffset = line.indexOf("Response ", publicMethodOffset);
-            int methodEndOffset = line.indexOf('(', responseOffset);
+            String methodName;
 
-            if ((publicMethodOffset != -1) && (responseOffset != -1) && (methodEndOffset != -1)) {
+            if ((methodName = isResponseMethod(line)) != null) {
 
-                publicReponseFound = true;
-                responseMethodName = line.substring(responseOffset + 9, methodEndOffset).trim();
-                variableTypes.clear();
+                responseTypePublicReponseFound = true;
+                responseTypeResponseMethodName = methodName;
+                responseTypeVariableTypes.clear();
             }
         } else {
 
@@ -250,7 +273,7 @@ public class JavaSourceParser {
 
             if ((returnOffset != -1) && (responseOffset != -1)) {
 
-                String responseTypeKey = className + "-" + responseMethodName;
+                String responseTypeKey = className + "-" + responseTypeResponseMethodName;
 
                 if (responseOkOffset != -1) {
 
@@ -271,21 +294,21 @@ public class JavaSourceParser {
                                 // We don't want any new objects
                                 String variableName = line.substring(responseOkStartOffset + 1, responseOkEndOffset).trim();
 
-                                if (variableTypes.containsKey(variableName)) {
+                                if (responseTypeVariableTypes.containsKey(variableName)) {
 
                                     ResponseType responseType = new ResponseType();
                                     responseType.setReturnStatus("OK");
 
-                                    String variableType = variableTypes.get(variableName);
+                                    String variableType = responseTypeVariableTypes.get(variableName);
 
                                     int listIndex = variableType.indexOf("List<");
 
                                     if (listIndex == -1) {
 
                                         // No list
-                                        if (importClasses.containsKey(variableTypes.get(variableName))) {
+                                        if (importClasses.containsKey(responseTypeVariableTypes.get(variableName))) {
 
-                                            responseType.setReturnType(importClasses.get(variableTypes.get(variableName)));
+                                            responseType.setReturnType(importClasses.get(responseTypeVariableTypes.get(variableName)));
 
                                             responseTypes.put(responseTypeKey, responseType);
                                         }
@@ -311,14 +334,260 @@ public class JavaSourceParser {
                 }
 
                 // We have found an return Response Type
-                pathAnnotationFound = false;
-                publicReponseFound = false;
+                responseTypeAnnotationFound = false;
+                responseTypePublicReponseFound = false;
 
             } else {
 
                 // Response.ok not found
                 // Save all variables in the variableTypes HashList
                 addVariableAndTypeToHashList(line);
+            }
+        }
+    }
+
+    private void findClassPaths(final String line, final HashMap<String, PathInfo> classPaths, final String className) {
+
+//TODO remove
+        if (className.endsWith("BuildInfoResource")) {
+            int i = 0;
+        }
+        if (classPathAnnotationFound == false) {
+
+            int pathOffset = isPathAnnotation(line);
+
+            // Search for enum in public methods
+            if (pathOffset != -1) {
+
+                parsePathAnnotation(line, pathOffset);
+
+                classPathAnnotationFound = true;
+            }
+            return; //  No path found yet
+        }
+
+        if (isClass(line)) {
+
+            if (!classPathTemporary.isEmpty()) {
+
+                classPath = classPathTemporary + '/';
+
+            } else {
+
+                classPath = "";
+            }
+
+            classPathAnnotationFound = false;
+            classPathTemporary = "";
+            return;
+        }
+
+        if (classPathAnnotationFound == false) {
+
+            if (isPathAnnotation(line) != -1) {
+
+                classPathAnnotationFound = true;
+                return;
+            }
+        } else {
+
+            if (isResponseMethod(line) != null) {
+
+                classPathAnnotationFound = false;
+                classPathTemporary = "";
+                return;
+
+            } else {
+
+                String methodReturnType;
+
+                if ((methodReturnType = isPublicMethod(line)) != null) {
+
+                    PathInfo pathInfo = new PathInfo();
+                    pathInfo.setParentPath(className);
+
+                    if (importClasses.containsKey(methodReturnType)) {
+
+                        methodReturnType = importClasses.get(methodReturnType);
+
+                        if (importClasses.containsKey(classPathTemporary)) {
+
+                            String[] pathList = importClasses.get(classPathTemporary).split("\\s+");
+
+                            if (pathList.length > 0) {
+
+                                if (!classPathTemporary.isEmpty()) {
+
+                                    pathInfo.setClassPath(classPath + importClasses.get(classPathTemporary) + '/');
+
+                                } else {
+
+                                    pathInfo.setClassPath(classPath);
+                                }
+
+                                classPaths.put(methodReturnType, pathInfo);
+//TODO remove
+//                                classPathInfoAdded = true;
+                            }
+
+                        } else {
+
+                            if(!classPathTemporary.isEmpty()) {
+                                
+                                pathInfo.setClassPath(classPath + classPathTemporary + '/');
+                                
+                            } else {
+                                
+                                pathInfo.setClassPath(classPath);                               
+                            }
+
+                            classPaths.put(methodReturnType, pathInfo);
+//TODO remove
+//                            classPathInfoAdded = true;
+                        }
+                    }
+
+                    classPathAnnotationFound = false;
+                    classPathTemporary = "";
+                }
+            }
+        }
+    }
+
+////TODO remove
+//    private void addClassPathIfNeeded(final HashMap<String, PathInfo> classPaths, final String className) {
+//
+//        if((classPathInfoAdded == false) && (classPathInfoAdded == true) ) {
+//
+//            PathInfo pathInfo = new PathInfo();
+//            pathInfo.setClassPath(classPath);
+//            pathInfo.setMethodPath("");
+//            pathInfo.setParentPath("");
+//
+//            if (importClasses.containsKey(classPath)) {
+//
+//                pathInfo.setClassPath(importClasses.get(classPath));
+//                
+//            } else {
+//                
+//                pathInfo.setClassPath(classPath);
+//            }
+//
+//            classPaths.put(className, pathInfo);
+//        }
+//    }
+    private void parsePathAnnotation(final String line, final int pathOffset) {
+
+        int quoteStartOffset = line.indexOf('\"', pathOffset);
+        int quoteEndOffset = line.indexOf('\"', quoteStartOffset + 1);
+        int parentheseEndOffset = line.indexOf(')', quoteEndOffset + 1);
+
+        if ((quoteStartOffset != -1) && (quoteEndOffset != -1) && ((parentheseEndOffset - quoteEndOffset) < 4)) {
+
+            classPathTemporary = line.substring(quoteStartOffset + 1, quoteEndOffset);
+
+        } else {
+
+            int parentheseStartOffset = line.indexOf('(');
+
+            // Probably a define
+            String pathContent = line.substring(parentheseStartOffset + 1, parentheseEndOffset);
+
+            if (pathContent.contains("+")) {
+
+                pathContent = pathContent.replaceAll("(\\s+|\"+)", "");
+
+                String[] pathList = pathContent.split("[+]");
+
+                if (pathList.length > 0) {
+
+                    String classPathTemporary = "";
+                    int index = 0;
+
+                    while (index < pathList.length) {
+
+                        if (pathList[index].equals("/") && (index == 0)) {
+
+                            index++;
+                            continue;
+                        }
+
+                        if (importClasses.containsKey(pathList[index])) {
+
+                            classPathTemporary = classPathTemporary + importClasses.get(pathList[index]);
+
+                        } else {
+
+                            classPathTemporary = classPathTemporary + pathList[index];
+                        }
+                        index++;
+                    }
+                }
+            } else {
+                
+                if (importClasses.containsKey(pathContent)) {
+
+                    classPathTemporary = classPathTemporary + importClasses.get(pathContent);
+
+                } else {
+
+                    classPathTemporary = classPathTemporary + pathContent;
+                }
+            }
+        }
+    }
+
+    private void findConstants(final String line, final HashMap<String, String> constants, final String className) {
+
+//TODO remove
+        if (className.endsWith("BuildInfoResourceConstants")) {
+            int i = 0;
+        }
+        if (isClass == false) {
+
+            if (isClass(line)) {
+
+                isClass = true;
+            }
+            return;
+        }
+
+        // Find constants
+        //     static final String PATH_CLEAR_CACHE_RESOURCE = "/clearcache";
+        int privateOffset = line.indexOf("private");
+        int staticOffset = line.indexOf("static");
+        int finalOffset = line.indexOf("final", staticOffset + 1);
+        int equalOffset = line.indexOf('=', finalOffset + 1);
+
+        if ((staticOffset != -1) && (finalOffset != -1) && (equalOffset != -1) && (privateOffset == -1)) {
+
+            String constant = line.substring(finalOffset + 6);
+
+            String[] constantList = constant.split("\\s+");
+
+            if (constantList.length > 3) {
+
+                if (constantList[constantList.length - 4].equals("String") && constantList[constantList.length - 2].equals("=")) {
+
+                    String value = constantList[constantList.length - 1];
+
+                    int firstQuoteOffset = value.indexOf('\"');
+                    int secondQuoteOffset = value.indexOf('\"', firstQuoteOffset + 1);
+
+                    if ((firstQuoteOffset != -1) && (secondQuoteOffset != -1)) {
+
+                        constants.put(className + '.' + constantList[constantList.length - 3], value.substring(firstQuoteOffset + 1, secondQuoteOffset));
+
+                    } else {
+
+                        int semiColonOffset = value.indexOf(';', firstQuoteOffset + 1);
+
+                        if (semiColonOffset != -1) {
+
+                            constants.put(className + '.' + constantList[constantList.length - 3], value.substring(0, semiColonOffset));
+                        }
+                    }
+                }
             }
         }
     }
@@ -385,10 +654,10 @@ public class JavaSourceParser {
 
             if (responseParenthesesEndOffset != -1) {
 
-                return  line.substring(statusStatusCodeBeginningOffset + 16, responseParenthesesEndOffset).trim();
+                return line.substring(statusStatusCodeBeginningOffset + 16, responseParenthesesEndOffset).trim();
             }
         }
-        
+
         return null;
     }
 
@@ -408,7 +677,7 @@ public class JavaSourceParser {
 
                 if (!variableType.isEmpty()) {
 
-                    variableTypes.put(variableName, variableType);
+                    responseTypeVariableTypes.put(variableName, variableType);
                 }
             }
         }
@@ -461,16 +730,23 @@ public class JavaSourceParser {
 
         if (importOffset != -1) {
 
-            // This is a import row
-            int lastDot = line.lastIndexOf('.');
+            String[] importList = line.split("\\s+");
 
-            if (lastDot != -1) {
+            if (importList.length > 0) {
 
-                int importEndOffset = line.indexOf(';', lastDot);
+                String lastPartOfRow = importList[importList.length - 1];
 
-                if (importEndOffset != -1) {
+                // This is a import row
+                int lastDot = lastPartOfRow.lastIndexOf('.');
 
-                    importClasses.put(line.substring(lastDot + 1, importEndOffset), line.substring(importOffset + 6, importEndOffset).trim());
+                if (lastDot != -1) {
+
+                    int importEndOffset = lastPartOfRow.indexOf(';', lastDot);
+
+                    if (importEndOffset != -1) {
+
+                        importClasses.put(lastPartOfRow.substring(lastDot + 1, importEndOffset), lastPartOfRow.substring(0, importEndOffset).trim());
+                    }
                 }
             }
         }
@@ -525,5 +801,75 @@ public class JavaSourceParser {
         }
 
         return packetAndclassName.toString();
+    }
+
+    int isPathAnnotation(final String line) {
+
+        int pathAnnotationOffset = line.indexOf("@Path");
+
+        if (pathAnnotationOffset != -1) {
+
+            int pathParamAnnotationOffset = line.indexOf("@PathParam", pathAnnotationOffset);
+
+            if (pathParamAnnotationOffset == -1) {
+
+                return pathAnnotationOffset;
+            }
+        }
+
+        return -1;
+    }
+
+    String isResponseMethod(final String line) {
+
+        int publicMethodOffset = line.indexOf("public ");
+
+        if (publicMethodOffset != -1) {
+
+            int responseOffset = line.indexOf("Response ", publicMethodOffset);
+            int methodEndOffset = line.indexOf('(', responseOffset);
+
+            if ((responseOffset != -1) && (methodEndOffset != -1)) {
+
+                return line.substring(responseOffset + 9, methodEndOffset).trim();
+            }
+        }
+
+        return null;
+    }
+
+    String isPublicMethod(final String line) {
+
+        int publicMethodOffset = line.indexOf("public ");
+
+        if (publicMethodOffset != -1) {
+
+            int methodEndOffset = line.indexOf('(', publicMethodOffset);
+
+            if (methodEndOffset != -1) {
+
+                String[] pathList = line.substring(publicMethodOffset, methodEndOffset).split("\\s+");
+
+                if (pathList.length > 1) {
+
+                    return pathList[pathList.length - 2];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    boolean isClass(final String line) {
+
+        int classOffset = line.indexOf(" class ");
+        int classStartOffset = line.indexOf('{', classOffset);
+
+        if ((classOffset != -1) && (classStartOffset != -1)) {
+
+            return true;
+        }
+
+        return false;
     }
 }

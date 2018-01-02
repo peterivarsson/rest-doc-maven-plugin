@@ -16,6 +16,7 @@ public class ClassInfo {
     private String className;
     private String packageAndClassName;
     private String classRootPath;
+    private String classPath;
     private List<MethodInfo> methodInfo;
 
     public String getClassName() {
@@ -34,12 +35,12 @@ public class ClassInfo {
         this.packageAndClassName = packageAndClassName;
     }
 
-    public String getClassRootPath() {
-        return classRootPath;
+    public String getClassPath() {
+        return classPath;
     }
 
-    public void setClassRootPath(String classRootPath) {
-        this.classRootPath = classRootPath;
+    public void setClassPath(String classPath) {
+        this.classPath = classPath;
     }
 
     public List<MethodInfo> getMethodInfo() {
@@ -50,8 +51,16 @@ public class ClassInfo {
         this.methodInfo = methodInfo;
     }
 
+    public String getClassRootPath() {
+        return classRootPath;
+    }
+
+    public void setClassRootPath(String classRootPath) {
+        this.classRootPath = classRootPath;
+    }
+
     @Override
     public String toString() {
-        return "\n   ClassInfo{" + "\n      className=" + className + ",\n      packageAndClassName=" + packageAndClassName + ",\n      classRootPath=" + classRootPath + ",\n      methodInfo=" + methodInfo + "\n   }";
+        return "\n   ClassInfo{" + "\n      className=" + className + ",\n      packageAndClassName=" + packageAndClassName + ",\n      classRootPath=" + classRootPath + ",\n      classPath=" + classPath + ",\n      methodInfo=" + methodInfo + "\n   }";
     }
 }

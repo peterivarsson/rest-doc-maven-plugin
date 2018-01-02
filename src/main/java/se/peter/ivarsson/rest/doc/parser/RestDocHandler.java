@@ -40,6 +40,8 @@ public class RestDocHandler {
     private final HashMap<String, String> javaDocComments = new HashMap<>();
     private final HashMap<String, String> enumTypes = new HashMap<>();
     private final HashMap<String, ResponseType> responseTypes = new HashMap<>();
+    private final HashMap<String, PathInfo> classPaths = new HashMap<>();
+    private final HashMap<String, String> constants = new HashMap<>();
 
     public static RestInfo restInfo = new RestInfo();
 
@@ -72,7 +74,7 @@ public class RestDocHandler {
 
                         if (path.toString().endsWith(".java")) {
 
-                            javaSourceParser.parseSourceFile(sourceDirectory, enumTypes, responseTypes, path, urlClassLoader);
+                            javaSourceParser.parseSourceFile(sourceDirectory, enumTypes, responseTypes, classPaths, constants, path, urlClassLoader);
                         }
                     });
 
@@ -87,6 +89,21 @@ public class RestDocHandler {
                             checkClassFilesForPathAnnotations(classesDirectory, path, sourceDirectory);
                         }
                     });
+
+            restInfo.getClassInfo().stream()
+                    .forEach(classinfo -> {
+
+                        updatePaths(classinfo);
+                    });
+
+//TODO remove
+classPaths.entrySet().stream()
+        .forEach(classpath -> {
+
+            System.out.print(classpath.getKey() + ": '");
+            System.out.print(classpath.getValue().getClassPath() + "' : '");
+            System.out.println(classpath.getValue().getParentPath() + "'");
+        });
         } catch (IOException ioe) {
 
             LOGGER.severe("IOException reading war file: " + ioe.getMessage());
@@ -95,7 +112,6 @@ public class RestDocHandler {
         }
 
         LOGGER.info(restInfo.toString());
-
     }
 
     private void checkClassFilesForPathAnnotations(final File classesDirectory, final Path classNamePath, final File sourceDirectory) {
@@ -203,7 +219,7 @@ public class RestDocHandler {
 
         String pathValue = annotation.value();
 
-        classInfo.setClassRootPath(pathValue);
+        classInfo.setClassPath(pathValue);
 
         restInfo.getClassInfo().add(classInfo);
     }
@@ -267,10 +283,10 @@ public class RestDocHandler {
 
     private void addMethodInfoToRestInfoList(final ClassInfo classInfo, final javax.ws.rs.Path annotation, final Method method, final HashMap<String, String> javaDocComments) {
 
-        if (classInfo.getClassRootPath() == null) {
+        if (classInfo.getClassPath() == null) {
 
             // Add to restInfoList
-            classInfo.setClassRootPath("");
+            classInfo.setClassPath("");
 
             restInfo.getClassInfo().add(classInfo);
         }
@@ -284,9 +300,9 @@ public class RestDocHandler {
 
         String pathValue;
 
-        if (classInfo.getClassRootPath().length() > 0) {
+        if (classInfo.getClassPath().length() > 0) {
 
-            pathValue = classInfo.getClassRootPath() + "/" + annotation.value();
+            pathValue = classInfo.getClassPath() + "/" + annotation.value();
 
         } else {
 
@@ -404,16 +420,16 @@ public class RestDocHandler {
         String responseTypesKey = className + '-' + method.getName();
 
         if (responseTypes.containsKey(responseTypesKey)) {
-            
+
             ResponseType responseType = responseTypes.get(responseTypesKey);
 
             returnTypeName = responseType.getReturnType();
-            
-            if( returnTypeName == null) {
-                
+
+            if (returnTypeName == null) {
+
                 returnTypeName = method.getReturnType().getName();
             }
-                
+
             returnInfo.setReturnClassName(returnTypeName);
             returnInfo.setReturnStatus(responseType.getReturnStatus());
 
@@ -450,13 +466,13 @@ public class RestDocHandler {
                 className = className.substring(listStartIndex + 5, listEndIndex).trim();
             }
         }
-        
+
         DataModelInfo domainData = restInfo.getDomainDataMap().get(className);
 
 //TODO remove
-if(className.endsWith("ShowStaticInfo")){
-    int i=0;
-}
+        if (className.endsWith("ShowStaticInfo")) {
+            int i = 0;
+        }
         if (domainData != null) {
 
             // This data already exists
@@ -800,4 +816,40 @@ if(className.endsWith("ShowStaticInfo")){
 
         return true;
     }
+
+    private void updatePaths(ClassInfo classInfo) {
+
+        if (classPaths.containsKey(classInfo.getPackageAndClassName())) {
+
+            List<String> paths = new ArrayList<>();
+
+            PathInfo pathInfo = classPaths.get(classInfo.getPackageAndClassName());
+
+            // Add Class path 
+            paths.add(pathInfo.getClassPath().replace("^/", ""));
+
+            while (!pathInfo.getParentPath().isEmpty()) {
+
+                pathInfo = classPaths.get(pathInfo.getParentPath());
+
+                if (pathInfo == null) {
+
+                    // Parent not found
+                    break;
+                }
+
+                paths.add(pathInfo.getClassPath().replace("^/", ""));
+            }
+        
+            String totalPath = "";
+
+            for(int index = paths.size() - 1; index >= 0;index--) {
+
+                totalPath = totalPath + paths.get(index);
+            }
+
+            classInfo.setClassRootPath(totalPath);
+        }
+    }
+
 }
