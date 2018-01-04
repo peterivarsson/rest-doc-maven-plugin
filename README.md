@@ -22,6 +22,12 @@ Put below configurations in your pom.xml, and modify the paths for your needs.
         <sourcesDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-test-mobilebackend-api/src/main/java</sourcesDirectory>
         <outputDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-output-directory</outputDirectory>
         <loggingDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-logging-directory</loggingDirectory>
+        <projectTitle>Mobile backend</projectTitle>
+        <!-- outputType html or openapi -->
+        <outputType>html</outputType>
+        <!-- openapi configuration parameters -->
+        <openApiDocVersion>1.0.0</openApiDocVersion>
+        <openApiLicenceName>Apache 2.0</openApiLicenceName>
     </configuration>
 
     <executions>

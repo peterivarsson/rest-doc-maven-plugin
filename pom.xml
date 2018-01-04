@@ -67,6 +67,12 @@
                     <sourcesDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-test-mobilebackend-api/src/main/java</sourcesDirectory>
                     <outputDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-output-directory</outputDirectory>
                     <loggingDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-logging-directory</loggingDirectory>
+                    <projectTitle>Mobile backend</projectTitle>
+                    <!-- outputType html or openapi -->
+                    <outputType>openapi</outputType>
+                    <!-- openapi configuration parameters -->
+                    <openApiDocVersion>1.0.0</openApiDocVersion>
+                    <openApiLicenceName>Apache 2.0</openApiLicenceName>
                 </configuration>
 
                 <executions>
@@ -113,7 +119,7 @@
 /*
  * Rest Documentation maven plugin.
  *
- * Copyright (C) 2017 Peter Ivarsson
+ * Copyright (C) 2018 Peter Ivarsson
  */
     </description>
 </project>

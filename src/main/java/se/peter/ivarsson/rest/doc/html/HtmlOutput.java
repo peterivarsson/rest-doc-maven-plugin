@@ -36,9 +36,9 @@ public class HtmlOutput {
 
     private static int methodNumber = -1;
 
-    public void createHTMLDocumantation(final File outputDirectory) {
+    public void createHTMLDocumantation(final File outputDirectory, final String projectTitle) {
 
-        writeIndexHtmlFile(outputDirectory);
+        writeIndexHtmlFile(outputDirectory, projectTitle);
 
         writeProgrammersInfoHtmlFile(outputDirectory);
 
@@ -47,15 +47,15 @@ public class HtmlOutput {
         writeDomainDataToFiles(outputDirectory);
     }
 
-    private void writeIndexHtmlFile(final File outputDirectory) {
+    private void writeIndexHtmlFile(final File outputDirectory, final String projectTitle) {
 
-        LOGGER.info("writeIndexHtmlFile() wrinte index.html");
+        LOGGER.info("writeIndexHtmlFile() write index.html");
 
         Path indexFilePath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + "/index.html"));
 
         final StringBuffer htmlBuffer = htmlHeader();
 
-        htmlBodyHeader(htmlBuffer, "REST api");
+        htmlBodyHeader(htmlBuffer, "REST api for project: \"" + projectTitle + "\"");
 
         htmlRestResourcesList(htmlBuffer);
 
@@ -90,7 +90,14 @@ public class HtmlOutput {
                     htmlBuffer.append(".html>");
                     htmlBuffer.append(res.getClassName());
                     htmlBuffer.append("</a> ");
-                    htmlBuffer.append(res.getClassRootPath());
+                    if(res.getClassRootPath() != null) {
+                        
+                        htmlBuffer.append(res.getClassRootPath());
+
+                    } else {
+                    
+                        htmlBuffer.append(res.getClassPath());
+                    }
                     htmlBuffer.append("</li>\r\t\t<BR>");
                 });
 
@@ -294,7 +301,7 @@ public class HtmlOutput {
 
             } else {
 
-                htmlBuffer.append(param.getParameterClassName());
+                htmlBuffer.append(replaceLessThanAndGreaterThan(param.getParameterClassName()));
             }
             htmlBuffer.append("</td><td>");
 
@@ -306,6 +313,10 @@ public class HtmlOutput {
 
                 case "javax.ws.rs.HeaderParam":
                     htmlBuffer.append("Header parameter");
+                    break;
+
+                case "javax.ws.rs.QueryParam":
+                    htmlBuffer.append("Query parameter");
                     break;
 
                 default:
@@ -384,6 +395,11 @@ public class HtmlOutput {
         }
 
         htmlBuffer.append("</td>\r\t\t\t</tr>\r\t\t</table><BR>");
+    }
+    
+    private String replaceLessThanAndGreaterThan(final String inString) {
+        
+        return inString.replaceAll("<", "&lt;").replaceAll(">", "&gt;");
     }
 
     private void writeDomainDataToFiles(final File outputDirectory) {

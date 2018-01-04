@@ -96,14 +96,6 @@ public class RestDocHandler {
                         updatePaths(classinfo);
                     });
 
-//TODO remove
-classPaths.entrySet().stream()
-        .forEach(classpath -> {
-
-            System.out.print(classpath.getKey() + ": '");
-            System.out.print(classpath.getValue().getClassPath() + "' : '");
-            System.out.println(classpath.getValue().getParentPath() + "'");
-        });
         } catch (IOException ioe) {
 
             LOGGER.severe("IOException reading war file: " + ioe.getMessage());
@@ -469,10 +461,6 @@ classPaths.entrySet().stream()
 
         DataModelInfo domainData = restInfo.getDomainDataMap().get(className);
 
-//TODO remove
-        if (className.endsWith("ShowStaticInfo")) {
-            int i = 0;
-        }
         if (domainData != null) {
 
             // This data already exists
@@ -636,9 +624,10 @@ classPaths.entrySet().stream()
 
                     parameterInfo.setParameterType("javax.ws.rs.PathParam");
                     parameterInfo.setParameterAnnotationName(pathParam.value());
-                    parameterInfo.setParameterClassName(parameter.getType().getName());
+                    parameterInfo.setParameterClassName(parameter.getParameterizedType().getTypeName());
 
                     methodInfo.getParameterInfo().add(parameterInfo);
+
                 } else if (annotation instanceof javax.ws.rs.HeaderParam) {
 
                     javax.ws.rs.HeaderParam headerParam = (javax.ws.rs.HeaderParam) annotation;
@@ -647,7 +636,19 @@ classPaths.entrySet().stream()
 
                     parameterInfo.setParameterType("javax.ws.rs.HeaderParam");
                     parameterInfo.setParameterAnnotationName(headerParam.value());
-                    parameterInfo.setParameterClassName(parameter.getType().getName());
+                    parameterInfo.setParameterClassName(parameter.getParameterizedType().getTypeName());
+
+                    methodInfo.getParameterInfo().add(parameterInfo);
+
+                } else if (annotation instanceof javax.ws.rs.QueryParam) {
+
+                    javax.ws.rs.QueryParam queryParam = (javax.ws.rs.QueryParam) annotation;
+
+                    parameterInfo = new ParameterInfo();
+
+                    parameterInfo.setParameterType("javax.ws.rs.QueryParam");
+                    parameterInfo.setParameterAnnotationName(queryParam.value());
+                    parameterInfo.setParameterClassName(parameter.getParameterizedType().getTypeName());
 
                     methodInfo.getParameterInfo().add(parameterInfo);
                 }

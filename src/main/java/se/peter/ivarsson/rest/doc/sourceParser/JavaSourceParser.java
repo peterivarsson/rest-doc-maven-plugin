@@ -42,8 +42,6 @@ public class JavaSourceParser {
 
     // Class path parsing
     private boolean classPathAnnotationFound = false;
-//TODO remove
-//    private boolean classPathInfoAdded = false;
     private String classPathTemporary = "";
     private String classPath = "";
 
@@ -156,8 +154,6 @@ public class JavaSourceParser {
         responseTypePublicReponseFound = false;
 
         classPathAnnotationFound = false;
-//TODO remove
-//        classPathInfoAdded = false;
         classPathTemporary = "";
         classPath = "";
 
@@ -188,8 +184,6 @@ public class JavaSourceParser {
 
                 findClassPaths(line, classPaths, className);
 
-//TODO remove
-//                addClassPathIfNeeded(classPaths, className);
                 findConstants(line, constants, className);
             });
 
@@ -348,10 +342,6 @@ public class JavaSourceParser {
 
     private void findClassPaths(final String line, final HashMap<String, PathInfo> classPaths, final String className) {
 
-//TODO remove
-        if (className.endsWith("BuildInfoResource")) {
-            int i = 0;
-        }
         if (classPathAnnotationFound == false) {
 
             int pathOffset = isPathAnnotation(line);
@@ -426,8 +416,6 @@ public class JavaSourceParser {
                                 }
 
                                 classPaths.put(methodReturnType, pathInfo);
-//TODO remove
-//                                classPathInfoAdded = true;
                             }
 
                         } else {
@@ -442,8 +430,6 @@ public class JavaSourceParser {
                             }
 
                             classPaths.put(methodReturnType, pathInfo);
-//TODO remove
-//                            classPathInfoAdded = true;
                         }
                     }
 
@@ -454,28 +440,6 @@ public class JavaSourceParser {
         }
     }
 
-////TODO remove
-//    private void addClassPathIfNeeded(final HashMap<String, PathInfo> classPaths, final String className) {
-//
-//        if((classPathInfoAdded == false) && (classPathInfoAdded == true) ) {
-//
-//            PathInfo pathInfo = new PathInfo();
-//            pathInfo.setClassPath(classPath);
-//            pathInfo.setMethodPath("");
-//            pathInfo.setParentPath("");
-//
-//            if (importClasses.containsKey(classPath)) {
-//
-//                pathInfo.setClassPath(importClasses.get(classPath));
-//                
-//            } else {
-//                
-//                pathInfo.setClassPath(classPath);
-//            }
-//
-//            classPaths.put(className, pathInfo);
-//        }
-//    }
     private void parsePathAnnotation(final String line, final int pathOffset) {
 
         int quoteStartOffset = line.indexOf('\"', pathOffset);
@@ -539,10 +503,6 @@ public class JavaSourceParser {
 
     private void findConstants(final String line, final HashMap<String, String> constants, final String className) {
 
-//TODO remove
-        if (className.endsWith("BuildInfoResourceConstants")) {
-            int i = 0;
-        }
         if (isClass == false) {
 
             if (isClass(line)) {

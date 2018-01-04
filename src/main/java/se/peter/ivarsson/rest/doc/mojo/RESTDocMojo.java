@@ -14,6 +14,7 @@ import java.nio.file.Paths;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import se.peter.ivarsson.rest.doc.html.HtmlOutput;
+import se.peter.ivarsson.rest.doc.html.OpenApiOutput;
 import se.peter.ivarsson.rest.doc.parser.RestDocHandler;
 
 /**
@@ -60,6 +61,42 @@ public class RESTDocMojo extends AbstractMojo {
      * @readonly
      */
     private File loggingDirectory;
+
+    /**
+     * Title of this project "Hello world"
+     *
+     * @parameter property="projectTitle"
+     * @required
+     * @readonly
+     */
+    private String projectTitle;
+
+    /**
+     * Output Type html or openapi
+     *
+     * @parameter property="outputType"
+     * @required
+     * @readonly
+     */
+    private String outputType;
+
+    /**
+     * Version of the created OpenApi documentation
+     *
+     * @parameter property="openApiDocVersion"
+     * @required
+     * @readonly
+     */
+    private String openApiDocVersion;
+
+    /**
+     * Licence information for the exposed API.
+     *
+     * @parameter property="openApiLicenceName"
+     * @required
+     * @readonly
+     */
+    private String openApiLicenceName;
 
     @Override
     public void execute() throws MojoExecutionException {
@@ -112,13 +149,50 @@ public class RESTDocMojo extends AbstractMojo {
             }
         }
 
+        // Project title
+        if (projectTitle.isEmpty() || (projectTitle == null)) {
+
+            String error = "Missing project title";
+            throw new MojoExecutionException(error);
+        }
+
+        // Output Type html or openapi
+        if (outputType.isEmpty() || (outputType == null)) {
+
+            String error = "Missing output type (html or openapi)";
+            throw new MojoExecutionException(error);
+        }
+    
         new RestDocHandler(classesDirectory, sourcesDirectory, loggingDirectory);
 
-        getLog().info("\nRESTDocMojo maven plugin creates HTML output files\n");
+        if( outputType.equals("html")) {
 
-        HtmlOutput htmlOutput = new HtmlOutput();
+            getLog().info("\nRESTDocMojo maven plugin creates HTML output files\n");
 
-        htmlOutput.createHTMLDocumantation(outputDirectory);
+            HtmlOutput htmlOutput = new HtmlOutput();
+
+            htmlOutput.createHTMLDocumantation(outputDirectory, projectTitle);
+
+        } else {
+            
+            if (openApiDocVersion.isEmpty() || (openApiDocVersion == null)) {
+
+                String error = "Missing version of the created OpenApi documentation";
+                throw new MojoExecutionException(error);
+            }
+
+            if (openApiLicenceName.isEmpty() || (openApiLicenceName == null)) {
+
+                String error = "Missing licence information for the exposed API";
+                throw new MojoExecutionException(error);
+            }
+
+            getLog().info("\nRESTDocMojo maven plugin creates OpenApi output file\n");
+
+            OpenApiOutput openApiOutput = new OpenApiOutput();
+
+            openApiOutput.createOpenApiDocumantation(outputDirectory, projectTitle, openApiDocVersion, openApiLicenceName);            
+        }
 
         getLog().info("\nRESTDocMojo maven plugin FINISHED executing\n");
     }
