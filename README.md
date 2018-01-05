@@ -7,7 +7,9 @@ It creates a index.html file in "output" directory.
 
 ## Plugin configuration
 
-You need to config all 4 directories in your pom.xml (classesDirectory, sourcesDirectory, outputDirectory and loggingDirectory)
+You need to config all 4 directories in your pom.xml (classesDirectory, sourcesDirectory, outputDirectory and loggingDirectory).
+Also projectTitle is mandatory.
+If output is set to openApi additional config parameters is used, see below.
 
 Put below configurations in your pom.xml, and modify the paths for your needs.
 
@@ -25,7 +27,7 @@ Put below configurations in your pom.xml, and modify the paths for your needs.
         <projectTitle>Mobile backend</projectTitle>
         <!-- outputType html or openapi -->
         <outputType>html</outputType>
-        <!-- openapi configuration parameters -->
+        <!-- Mandatory openapi configuration parameters -->
         <openApiDocVersion>1.0.0</openApiDocVersion>
         <openApiLicenceName>Apache 2.0</openApiLicenceName>
     </configuration>

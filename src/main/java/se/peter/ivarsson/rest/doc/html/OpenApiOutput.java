@@ -108,25 +108,27 @@ public class OpenApiOutput {
                     methodInfo.getParameterInfo().stream()
                             .forEach(parameter -> {
 
-                                openApiBuffer.append("\n        name: ");
-                                openApiBuffer.append(parameter.getParameterAnnotationName());
-                                openApiBuffer.append("\n        in: ");
                                 switch (parameter.getParameterType()) {
 
                                     case "javax.ws.rs.PathParam":
+                                        openApiBuffer.append("\n        name: ");
+                                        openApiBuffer.append(parameter.getParameterAnnotationName());
+                                        openApiBuffer.append("\n        in: ");
                                         openApiBuffer.append("path");
                                         break;
 
                                     case "javax.ws.rs.HeaderParam":
+                                        openApiBuffer.append("\n        name: ");
+                                        openApiBuffer.append(parameter.getParameterAnnotationName());
+                                        openApiBuffer.append("\n        in: ");
                                         openApiBuffer.append("header");
                                         break;
 
                                     case "javax.ws.rs.QueryParam":
+                                        openApiBuffer.append("\n        name: ");
+                                        openApiBuffer.append(parameter.getParameterAnnotationName());
+                                        openApiBuffer.append("\n        in: ");
                                         openApiBuffer.append("query");
-                                        break;
-
-                                    default:
-                                        openApiBuffer.append("-");
                                         break;
                                 }
 
@@ -145,14 +147,75 @@ public class OpenApiOutput {
 
     private String onlyJavaDocComments(String javaDoc) {
 
-        int atIndex = javaDoc.indexOf("@");
+        StringBuffer comment = new StringBuffer();
 
-        if (atIndex != -1) {
+        boolean startOfCommentFound = false;
+        boolean endOfCommentFound = false;
 
-            return javaDoc.substring(3, atIndex).replace("/", "").replace("*", "").trim();
+        int spacesFound = 0;
+
+        byte[] javaDocArray = javaDoc.getBytes();
+        char character = 0;
+
+        for (int index = 0; (index < javaDocArray.length) && !endOfCommentFound; index++) {
+
+            character = (char) javaDocArray[index];
+
+            switch (character) {
+
+                case '\r':
+                case '\n':
+                case '\f':
+                case '@':
+                    if (startOfCommentFound) {
+
+                        // End comment capture
+                        endOfCommentFound = true;
+                    }
+                    break;
+
+                case '/':
+                case '*':
+                    if (startOfCommentFound) {
+
+                        comment.append(character);
+                    }
+                    break;
+
+                case '\t':
+                case ' ':
+                    if (startOfCommentFound) {
+
+                        spacesFound++;
+
+                        if (spacesFound == 1) {
+
+                            comment.append(' ');
+                        }
+                    }
+                    break;
+
+                case ':':
+                    if (startOfCommentFound) {
+
+                        comment.append('.');
+                    }
+                    break;
+
+                default:
+                    // From '!' to '~' except charaters above
+                    if ((character >= 0x21) && (character <= 0xFE)) {
+
+                        comment.append(character);
+
+                        startOfCommentFound = true;
+                        spacesFound = 0;
+                    }
+                    break;
+            }
         }
 
-        return "";
+        return comment.toString();
     }
 
     private String parameterCommentsFromJavaDoc(final String javaDoc, String parameterName) {
