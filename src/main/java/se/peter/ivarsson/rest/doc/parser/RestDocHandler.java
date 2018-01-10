@@ -662,10 +662,12 @@ public class RestDocHandler {
                 if (methodInfo.getConsumeType().isEmpty()) {
 
                     parameterInfo.setParameterType("-");
+
                 } else {
 
                     parameterInfo.setParameterType(methodInfo.getConsumeType());
                 }
+
                 if (parameter.getName().startsWith("arg")) {
 
                     switch (parameter.getName().charAt(3)) {
@@ -707,7 +709,7 @@ public class RestDocHandler {
                             break;
 
                         case '9':
-                            parameterInfo.setParameterAnnotationName("Tenth argument");
+                           parameterInfo.setParameterAnnotationName("Tenth argument");
                             break;
 
                         default:
@@ -722,6 +724,9 @@ public class RestDocHandler {
                 parameterInfo.setParameterClassName(parameter.getType().getName());
 
                 methodInfo.getParameterInfo().add(parameterInfo);
+
+                methodInfo.setRequestBodyName(parameterInfo.getParameterAnnotationName());
+                methodInfo.setRequestBodyClassName(parameterInfo.getParameterClassName());
 
                 addDomainDataInfo(parameter.getType().getName());
 

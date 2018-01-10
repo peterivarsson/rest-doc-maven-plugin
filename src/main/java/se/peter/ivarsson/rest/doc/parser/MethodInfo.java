@@ -19,6 +19,8 @@ public class MethodInfo {
     private String httpRequestType;
     private String produceType = "";
     private String consumeType = "";
+    private String requestBodyName = "";
+    private String requestBodyClassName = "";
     private ReturnInfo returnInfo;
     private List<ParameterInfo> parameterInfo;
     private String javaDoc;
@@ -103,8 +105,24 @@ public class MethodInfo {
         this.deprecated = deprecated;
     }
 
+    public String getRequestBodyName() {
+        return requestBodyName;
+    }
+
+    public void setRequestBodyName(String requestBodyName) {
+        this.requestBodyName = requestBodyName;
+    }
+
+    public String getRequestBodyClassName() {
+        return requestBodyClassName;
+    }
+
+    public void setRequestBodyClassName(String requestBodyClassName) {
+        this.requestBodyClassName = requestBodyClassName;
+    }
+
     @Override
     public String toString() {
-        return " MethodInfo{" + "\n         methodName=" + methodName + "\n         deprecated=" + deprecated + ",\n         restPath=" + restPath + ",\n         httpRequestType=" + httpRequestType + ",\n         produceType=" + produceType + ",\n         consumeType=" + consumeType + ",\n         returnInfo=" + returnInfo + ",\n         parameterInfo=" + parameterInfo + "\n         javaDoc=" + javaDoc + "\n      }";
+        return " MethodInfo{" + "\n         methodName=" + methodName + "\n         deprecated=" + deprecated + ",\n         restPath=" + restPath + ",\n         httpRequestType=" + httpRequestType + ",\n         produceType=" + produceType + ",\n         consumeType=" + consumeType + ",\n         requestBodyName=" + requestBodyName + ",\n         requestBodyClassName=" + requestBodyClassName + ",\n         returnInfo=" + returnInfo + ",\n         parameterInfo=" + parameterInfo + "\n         javaDoc=" + javaDoc + "\n      }";
     }
 }

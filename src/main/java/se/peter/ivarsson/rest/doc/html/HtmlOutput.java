@@ -53,7 +53,7 @@ public class HtmlOutput {
 
         Path indexFilePath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + "/index.html"));
 
-        final StringBuffer htmlBuffer = htmlHeader();
+        final StringBuilder htmlBuffer = htmlHeader();
 
         htmlBodyHeader(htmlBuffer, "REST api for project: \"" + projectTitle + "\"");
 
@@ -66,7 +66,7 @@ public class HtmlOutput {
         writeHtmlToFile(indexFilePath, htmlBuffer);
     }
 
-    private void htmlRestResourcesList(final StringBuffer htmlBuffer) {
+    private void htmlRestResourcesList(final StringBuilder htmlBuffer) {
 
         htmlBuffer.append("\r\r\t<ul>");
 
@@ -110,7 +110,7 @@ public class HtmlOutput {
 
         Path programmersInfoFilePath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + "/programmersinfo.html"));
 
-        final StringBuffer htmlBuffer = htmlHeader();
+        final StringBuilder htmlBuffer = htmlHeader();
 
         htmlBodyHeader(htmlBuffer, "Programmers Info");
 
@@ -176,7 +176,7 @@ public class HtmlOutput {
 
         Path programmersInfoFilePath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + "/" + classInfo.getPackageAndClassName() + ".html"));
 
-        final StringBuffer htmlBuffer = htmlHeader();
+        final StringBuilder htmlBuffer = htmlHeader();
 
         htmlBodyHeader(htmlBuffer, classInfo.getClassName());
 
@@ -189,7 +189,7 @@ public class HtmlOutput {
         writeHtmlToFile(programmersInfoFilePath, htmlBuffer);
     }
 
-    private void htmlRestResourceDetail(final StringBuffer htmlBuffer, final String resourceType) {
+    private void htmlRestResourceDetail(final StringBuilder htmlBuffer, final String resourceType) {
 
         List<MethodInfo> methodInfoList = new ArrayList<>();
 
@@ -250,7 +250,7 @@ public class HtmlOutput {
         });
     }
 
-    private void htmlMethodDetail(final StringBuffer htmlBuffer, final MethodInfo methodInfo, final int methodNumber) {
+    private void htmlMethodDetail(final StringBuilder htmlBuffer, final MethodInfo methodInfo, final int methodNumber) {
 
         htmlBuffer.append("\r\r\r\t\t<p><a name=\"method");
         htmlBuffer.append(methodNumber);
@@ -419,7 +419,7 @@ public class HtmlOutput {
 
         Path programmersInfoFilePath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + "/" + domainDataType + ".html"));
 
-        final StringBuffer htmlBuffer = htmlHeader();
+        final StringBuilder htmlBuffer = htmlHeader();
 
         htmlBodyHeader(htmlBuffer, domainDataType);
 
@@ -432,7 +432,7 @@ public class HtmlOutput {
         writeHtmlToFile(programmersInfoFilePath, htmlBuffer);
     }
 
-    private void htmlRestResourceDomainData(final StringBuffer htmlBuffer, final String domainDataType) {
+    private void htmlRestResourceDomainData(final StringBuilder htmlBuffer, final String domainDataType) {
 
         LOGGER.info("htmlRestResourceDomainData() domainDataType = " + domainDataType);
 
@@ -495,9 +495,9 @@ public class HtmlOutput {
         htmlBuffer.append("\r\t\t</table><BR>");
     }
 
-    private StringBuffer htmlHeader() {
+    private StringBuilder htmlHeader() {
 
-        final StringBuffer htmlBuffer = new StringBuffer(4096);
+        final StringBuilder htmlBuffer = new StringBuilder(4096);
 
         htmlBuffer.append("<html lang=\"en\">\r\t<head>");
         htmlBuffer.append("\r\r\t<style>\r\t\ttable, th, td {\r\t\t\tborder: 1px solid;\r\t\t\tborder-collapse: collapse;\r\t\t\tborder-color: #D6D6C2;\r\t\t}\r\t\tth, td {\r\t\t\tpadding: 8px;\r\t\t}\r\t</style>");
@@ -506,21 +506,21 @@ public class HtmlOutput {
         return htmlBuffer;
     }
 
-    private void htmlBodyHeader(final StringBuffer htmlBuffer, String headerText) {
+    private void htmlBodyHeader(final StringBuilder htmlBuffer, String headerText) {
 
         htmlBuffer.append("\r\t\t<a name=\"top\"><h1>");
         htmlBuffer.append(headerText);
         htmlBuffer.append("</h1></a>");
     }
 
-    private void htmlGoToProgrammersInfo(final StringBuffer htmlBuffer) {
+    private void htmlGoToProgrammersInfo(final StringBuilder htmlBuffer) {
 
         htmlBuffer.append("\r\r\t<ul style=\"list-style-type: none\">");
         htmlBuffer.append("\r\t\t<li><a href=./programmersinfo.html><h4>Programmers Information</h4></a></li>");
         htmlBuffer.append("\r\t</ul>");
     }
 
-    private void htmlFooter(final StringBuffer htmlBuffer) {
+    private void htmlFooter(final StringBuilder htmlBuffer) {
 
         htmlBuffer.append("\r\r\t<table style=\"border: none;\">");
         htmlBuffer.append("\r\r\t\t<tr>");
@@ -534,7 +534,7 @@ public class HtmlOutput {
         htmlBuffer.append("\r\t</body>\r</html>");
     }
 
-    private void htmlGoHome(final StringBuffer htmlBuffer) {
+    private void htmlGoHome(final StringBuilder htmlBuffer) {
 
         htmlBuffer.append("\r\r\t<table style=\"border: none;\">");
         htmlBuffer.append("\r\r\t\t<tr>");
@@ -543,7 +543,7 @@ public class HtmlOutput {
         htmlBuffer.append("\r\r\t<table>");
     }
 
-    private void writeHtmlToFile(final Path indexFilePath, final StringBuffer htmlBuffer) {
+    private void writeHtmlToFile(final Path indexFilePath, final StringBuilder htmlBuffer) {
 
         try {
 
