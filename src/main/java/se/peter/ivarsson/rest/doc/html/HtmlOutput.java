@@ -17,7 +17,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
-import java.util.logging.Logger;
 import se.peter.ivarsson.rest.doc.parser.ClassInfo;
 import se.peter.ivarsson.rest.doc.parser.FieldInfo;
 import se.peter.ivarsson.rest.doc.parser.MehodInfoComparator;
@@ -31,8 +30,6 @@ import se.peter.ivarsson.rest.doc.parser.RestDocHandler;
  * @author Peter Ivarsson Peter.Ivarsson@cybercom.com
  */
 public class HtmlOutput {
-
-    private static final Logger LOGGER = Logger.getLogger(HtmlOutput.class.getSimpleName());
 
     private static int methodNumber = -1;
 
@@ -49,7 +46,7 @@ public class HtmlOutput {
 
     private void writeIndexHtmlFile(final File outputDirectory, final String projectTitle) {
 
-        LOGGER.info("writeIndexHtmlFile() write index.html");
+        RestDocHandler.getLogger().info("writeIndexHtmlFile() write index.html");
 
         Path indexFilePath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + "/index.html"));
 
@@ -70,7 +67,7 @@ public class HtmlOutput {
 
         htmlBuffer.append("\r\r\t<ul>");
 
-        LOGGER.info("htmlRestResourcesList()  restInfo.ClassInfo size = "
+        RestDocHandler.getLogger().info("htmlRestResourcesList()  restInfo.ClassInfo size = "
                 + RestDocHandler.restInfo.getClassInfo().size());
 
         RestDocHandler.restInfo.getClassInfo().stream()
@@ -90,14 +87,8 @@ public class HtmlOutput {
                     htmlBuffer.append(".html>");
                     htmlBuffer.append(res.getClassName());
                     htmlBuffer.append("</a> ");
-                    if(res.getClassRootPath() != null) {
-                        
-                        htmlBuffer.append(res.getClassRootPath());
-
-                    } else {
-                    
-                        htmlBuffer.append(res.getClassPath());
-                    }
+                    htmlBuffer.append(res.getClassRootPath());
+                    htmlBuffer.append(res.getClassPath());
                     htmlBuffer.append("</li>\r\t\t<BR>");
                 });
 
@@ -106,7 +97,7 @@ public class HtmlOutput {
 
     private void writeProgrammersInfoHtmlFile(final File outputDirectory) {
 
-        LOGGER.info("writeProgrammersInfoHtmlFile() wrinte index.html");
+        RestDocHandler.getLogger().info("writeProgrammersInfoHtmlFile() wrinte index.html");
 
         Path programmersInfoFilePath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + "/programmersinfo.html"));
 
@@ -161,7 +152,7 @@ public class HtmlOutput {
 
     private void writeResouresDocumentationToFiles(final File outputDirectory) {
 
-        LOGGER.info("writeResouresDocumentationToFiles() restInfo.ClassInfo size = "
+        RestDocHandler.getLogger().info("writeResouresDocumentationToFiles() restInfo.ClassInfo size = "
                 + RestDocHandler.restInfo.getClassInfo().size());
 
         RestDocHandler.restInfo.getClassInfo().stream().forEach(classInfo -> {
@@ -172,7 +163,7 @@ public class HtmlOutput {
 
     private void writeResouresDocumentationToFile(final File outputDirectory, final ClassInfo classInfo) {
 
-        LOGGER.info("writeResouresDocumentationToFile( " + classInfo.getClassName() + " )");
+        RestDocHandler.getLogger().info("writeResouresDocumentationToFile( " + classInfo.getClassName() + " )");
 
         Path programmersInfoFilePath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + "/" + classInfo.getPackageAndClassName() + ".html"));
 
@@ -193,7 +184,7 @@ public class HtmlOutput {
 
         List<MethodInfo> methodInfoList = new ArrayList<>();
 
-        LOGGER.info("htmlRestResourceDetail() resourceType = " + resourceType);
+        RestDocHandler.getLogger().info("htmlRestResourceDetail() resourceType = " + resourceType);
 
         RestDocHandler.restInfo.getClassInfo().stream()
                 .forEach((res) -> {
@@ -225,14 +216,7 @@ public class HtmlOutput {
             htmlBuffer.append("\">");
             htmlBuffer.append(method.getHttpRequestType());
             htmlBuffer.append(" ");
-            if (method.getRestPath().equals("")) {
-
-                htmlBuffer.append("\"\"");
-
-            } else {
-
-                htmlBuffer.append(method.getRestPath());
-            }
+            htmlBuffer.append(method.getMethodPath());
             htmlBuffer.append("</a></li><BR>");
 
             methodNumber++;
@@ -256,14 +240,14 @@ public class HtmlOutput {
         htmlBuffer.append(methodNumber);
         htmlBuffer.append("\"><h3>");
         htmlBuffer.append(methodInfo.getHttpRequestType());
-        if (methodInfo.getRestPath().equals("")) {
+        if (methodInfo.getMethodPath().equals("")) {
 
             htmlBuffer.append(" \"\"");
 
         } else {
 
             htmlBuffer.append(" ");
-            htmlBuffer.append(methodInfo.getRestPath());
+            htmlBuffer.append(methodInfo.getMethodPath());
         }
         if (methodInfo.isDeprecated()) {
 
@@ -404,7 +388,7 @@ public class HtmlOutput {
 
     private void writeDomainDataToFiles(final File outputDirectory) {
 
-        LOGGER.info("writeDomainDataToFiles() restInfo.ClassInfo size = " + RestDocHandler.restInfo.getClassInfo().size());
+        RestDocHandler.getLogger().info("writeDomainDataToFiles() restInfo.ClassInfo size = " + RestDocHandler.restInfo.getClassInfo().size());
 
         RestDocHandler.restInfo.getDomainDataMap().entrySet().stream()
                 .filter(Objects::nonNull).forEach(domainData -> {
@@ -415,7 +399,7 @@ public class HtmlOutput {
 
     private void writeDomainDataToFile(final File outputDirectory, final String domainDataType) {
 
-        LOGGER.info("writeDomainDataToFile( " + domainDataType + " )");
+        RestDocHandler.getLogger().info("writeDomainDataToFile( " + domainDataType + " )");
 
         Path programmersInfoFilePath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + "/" + domainDataType + ".html"));
 
@@ -434,13 +418,13 @@ public class HtmlOutput {
 
     private void htmlRestResourceDomainData(final StringBuilder htmlBuffer, final String domainDataType) {
 
-        LOGGER.info("htmlRestResourceDomainData() domainDataType = " + domainDataType);
+        RestDocHandler.getLogger().info("htmlRestResourceDomainData() domainDataType = " + domainDataType);
 
         HashMap domainData = RestDocHandler.restInfo.getDomainDataMap();
 
         if (domainData.get(domainDataType) == null) {
 
-            LOGGER.severe("htmlRestResourceDomainData() domainDataType = " + domainDataType + "Not found in DomainData map");
+            RestDocHandler.getLogger().severe("htmlRestResourceDomainData() domainDataType = " + domainDataType + "Not found in DomainData map");
             return;
         }
 
@@ -551,7 +535,7 @@ public class HtmlOutput {
 
         } catch (IOException ioe) {
 
-            LOGGER.severe("writeHtmlToFile() Path ='" + indexFilePath.toString() + "' IOException: " + ioe.getMessage());
+            RestDocHandler.getLogger().severe("writeHtmlToFile() Path ='" + indexFilePath.toString() + "' IOException: " + ioe.getMessage());
         }
     }
 

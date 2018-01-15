@@ -13,10 +13,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
-import java.util.logging.Logger;
 import se.peter.ivarsson.rest.doc.parser.ClassInfo;
 import se.peter.ivarsson.rest.doc.parser.DataModelInfo;
-import se.peter.ivarsson.rest.doc.parser.FieldInfo;
 import se.peter.ivarsson.rest.doc.parser.MethodInfo;
 import se.peter.ivarsson.rest.doc.parser.RestDocHandler;
 
@@ -26,9 +24,8 @@ import se.peter.ivarsson.rest.doc.parser.RestDocHandler;
  */
 public class OpenApiOutput {
 
-    private static final Logger LOGGER = Logger.getLogger(OpenApiOutput.class.getSimpleName());
-
     private final HashMap<String, String> components = new HashMap<>();
+    private final HashMap<String, String> methodPaths = new HashMap<>();
 
     public void createOpenApiDocumantation(final File outputDirectory, final String projectTitle, final String openApiDocVersion, final String openApiLicenceName) {
 
@@ -66,90 +63,81 @@ public class OpenApiOutput {
                 .filter(classInfo -> classInfo.getMethodInfo() != null)
                 .forEach(classInfo -> {
 
-                    addMethodPaths(openApiBuffer, classInfo);
+                    addMethodPaths(classInfo);
                 });
+        
+        methodPaths.entrySet().stream()
+                .sorted((e1, e2) ->  e1.getKey().compareTo(e2.getKey()))
+                .forEach(entrySet -> {
+                    
+                    openApiBuffer.append(entrySet.getKey());
+                    openApiBuffer.append(entrySet.getValue());
+                });
+
     }
 
-    private void addMethodPaths(final StringBuilder openApiBuffer, final ClassInfo classinfo) {
+    private void addMethodPaths(final ClassInfo classinfo) {
 
         classinfo.getMethodInfo().stream()
                 .forEach(methodInfo -> {
 
-                    openApiBuffer.append("  ");
+                    RestDocHandler.getLogger().fine(() -> "ClassRootPath: " + classinfo.getClassRootPath());
+                    RestDocHandler.getLogger().fine(() -> "ClassPath: " + classinfo.getClassPath());
+                    RestDocHandler.getLogger().fine(() -> "methodInfo.getMethodPath: " + methodInfo.getMethodPath());
 
                     StringBuilder methodPath = new StringBuilder();
 
-                    if (classinfo.getClassRootPath() != null) {
+                    methodPath.append(classinfo.getClassRootPath());
+                    methodPath.append(classinfo.getClassPath());
+                    methodPath.append(methodInfo.getMethodPath());
+                    methodPath.append(":\n");
 
-                        methodPath.append(classinfo.getClassRootPath());
+                    final StringBuilder pathContent = new StringBuilder();
 
-                    } else {
+                    String existingPaths = methodPaths.get(methodPath.toString());
 
-                        if ((classinfo.getClassPath() != null) && !methodInfo.getRestPath().contains(classinfo.getClassPath())) {
+                    if (existingPaths != null) {
 
-                            methodPath.append(classinfo.getClassPath());
-                        }
+                        pathContent.append(existingPaths);
                     }
 
-                    if (!methodInfo.getRestPath().isEmpty()) {
+//                    openApiBuffer.append(methodPath);
+//TODO remove
+                    System.out.println("ClassRootPath:          " + classinfo.getClassRootPath());
+                    System.out.println("ClassPath:              " + classinfo.getClassPath());
+                    System.out.println("methodInfo.getMethodPath: " + methodInfo.getMethodPath());
+                    System.out.println("Resulting methodPath:   " + methodPath + "\n");
 
-                        if (methodPath.length() > 0) {
-
-                            if ((methodInfo.getRestPath().charAt(0) != '/') && (methodPath.charAt(methodPath.length() - 1) != '/')) {
-
-                                openApiBuffer.append("/");
-                            }
-
-                            if ((methodInfo.getRestPath().charAt(0) == '/') && (methodPath.charAt(methodPath.length() - 1) == '/')) {
-
-                                methodPath.append(methodInfo.getRestPath().substring(1));
-
-                            }
-                        } else {
-
-                            methodPath.append(methodInfo.getRestPath());
-                        }
-                    }
-
-                    if (methodPath.toString().endsWith("/")) {
-
-                        openApiBuffer.append(methodPath.toString().substring(0, methodPath.toString().length() - 1));
-
-                    } else {
-
-                        openApiBuffer.append(methodPath);
-                    }
-
-                    openApiBuffer.append(":\n    ");
-                    openApiBuffer.append(methodInfo.getHttpRequestType().toLowerCase());
-                    openApiBuffer.append(":\n      ");
-                    openApiBuffer.append("description: ");
-                    openApiBuffer.append(onlyJavaDocComments(methodInfo.getJavaDoc()));
-                    openApiBuffer.append("\n      parameters:");
+                    pathContent.append("    ");
+                    pathContent.append(methodInfo.getHttpRequestType().toLowerCase());
+                    pathContent.append(":\n      ");
+                    pathContent.append("description: ");
+                    pathContent.append(onlyJavaDocComments(methodInfo.getJavaDoc()));
+                    pathContent.append("\n      parameters:");
                     methodInfo.getParameterInfo().stream()
                             .forEach(parameter -> {
 
                                 switch (parameter.getParameterType()) {
 
                                     case "javax.ws.rs.PathParam":
-                                        openApiBuffer.append("\n        name: ");
-                                        openApiBuffer.append(parameter.getParameterAnnotationName());
-                                        openApiBuffer.append("\n        in: ");
-                                        openApiBuffer.append("path");
+                                        pathContent.append("\n        - name: ");
+                                        pathContent.append(parameter.getParameterAnnotationName());
+                                        pathContent.append("\n          in: ");
+                                        pathContent.append("path");
                                         break;
 
                                     case "javax.ws.rs.HeaderParam":
-                                        openApiBuffer.append("\n        name: ");
-                                        openApiBuffer.append(parameter.getParameterAnnotationName());
-                                        openApiBuffer.append("\n        in: ");
-                                        openApiBuffer.append("header");
+                                        pathContent.append("\n        - name: ");
+                                        pathContent.append(parameter.getParameterAnnotationName());
+                                        pathContent.append("\n          in: ");
+                                        pathContent.append("header");
                                         break;
 
                                     case "javax.ws.rs.QueryParam":
-                                        openApiBuffer.append("\n        name: ");
-                                        openApiBuffer.append(parameter.getParameterAnnotationName());
-                                        openApiBuffer.append("\n        in: ");
-                                        openApiBuffer.append("query");
+                                        pathContent.append("\n        - name: ");
+                                        pathContent.append(parameter.getParameterAnnotationName());
+                                        pathContent.append("\n          in: ");
+                                        pathContent.append("query");
                                         break;
                                 }
 
@@ -157,17 +145,19 @@ public class OpenApiOutput {
 
                                 if (!description.isEmpty()) {
 
-                                    openApiBuffer.append("\n        description: ");
-                                    openApiBuffer.append(description);
+                                    pathContent.append("\n          description: ");
+                                    pathContent.append(description);
                                 }
                             });
 
                     if (!methodInfo.getRequestBodyClassName().isEmpty()) {
 
-                        addRequestBodyInfo(openApiBuffer, methodInfo);
+                        addRequestBodyInfo(pathContent, methodInfo);
                     }
 
-                    openApiBuffer.append("\n\n");
+                    pathContent.append("\n");
+                    
+                    methodPaths.put(methodPath.toString(), pathContent.toString());
                 });
     }
 
@@ -176,6 +166,8 @@ public class OpenApiOutput {
         openApiBuffer.append("\n      requestBody:");
         openApiBuffer.append("\n        description: ");
         openApiBuffer.append(methodInfo.getRequestBodyName());
+        openApiBuffer.append(", Class = ");
+        openApiBuffer.append(methodInfo.getRequestBodyClassName());
         openApiBuffer.append("\n        content:\n          '");
         if (!methodInfo.getConsumeType().isEmpty()) {
 
@@ -211,16 +203,16 @@ public class OpenApiOutput {
     private void addComponent(final String componentName, final String className) {
 
         StringBuilder component = new StringBuilder();
-        
+
         component.append("    ");
         component.append(componentName);
         component.append(":");
         component.append("\n      properties:");
-        
+
         DataModelInfo dataModelInfo = RestDocHandler.restInfo.getDomainDataMap().get(className);
-        
-        if(dataModelInfo != null) {
-            
+
+        if (dataModelInfo != null) {
+
             dataModelInfo.getFields().stream()
                     .forEach(field -> {
 
@@ -230,7 +222,7 @@ public class OpenApiOutput {
                         component.append("\n          type: ");
                         String fieldType = mapFieldType(field.getFieldType());
                         component.append(fieldType);
-                        if( fieldType.equals("array")) {
+                        if (fieldType.equals("array")) {
 
                             component.append("\n          items:");
                             component.append("\n            ");
@@ -275,7 +267,7 @@ public class OpenApiOutput {
 
             case "java.lang.Double":
                 return "double";
-                
+
             case "java.lang.Float":
                 return "float";
 
@@ -294,7 +286,7 @@ public class OpenApiOutput {
                 if (lastDot > 0) {
 
                     String componentName = field.substring(lastDot + 1);
-                    
+
                     StringBuilder componentRef = new StringBuilder("$ref: '#/components/schemas/");
 
                     componentRef.append(componentName);
@@ -303,11 +295,11 @@ public class OpenApiOutput {
                     DataModelInfo restBodyDataModel = RestDocHandler.restInfo.getDomainDataMap().get(field);
 
                     addComponent(componentName, field);
-                    
+
                     return componentRef.toString();
-                    
+
                 } else {
-                    
+
                     return field;
                 }
         }
@@ -425,7 +417,7 @@ public class OpenApiOutput {
 
         } catch (IOException ioe) {
 
-            LOGGER.severe("writeOpenApiToFile() Path ='" + openApiPath.toString() + "' IOException: " + ioe.getMessage());
+            RestDocHandler.getLogger().severe("writeOpenApiToFile() Path ='" + openApiPath.toString() + "' IOException: " + ioe.getMessage());
         }
     }
 

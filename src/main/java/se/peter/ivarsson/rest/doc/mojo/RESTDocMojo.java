@@ -10,6 +10,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -26,7 +29,7 @@ import se.peter.ivarsson.rest.doc.parser.RestDocHandler;
  */
 public class RESTDocMojo extends AbstractMojo {
 
-    /**
+   /**
      * File path where to find the classes files ( the classes directory )
      *
      * @parameter property="classesDirectory"
@@ -100,7 +103,7 @@ public class RESTDocMojo extends AbstractMojo {
 
     @Override
     public void execute() throws MojoExecutionException {
-
+        
         getLog().info("\nRESTDocMojo maven plugin STARTED executing\n");
 
         // avoid execution if classes directory does not exist
@@ -196,5 +199,4 @@ public class RESTDocMojo extends AbstractMojo {
 
         getLog().info("\nRESTDocMojo maven plugin FINISHED executing\n");
     }
-
 }

@@ -15,8 +15,8 @@ public class ClassInfo {
 
     private String className;
     private String packageAndClassName;
-    private String classRootPath;
-    private String classPath;
+    private String classRootPath = "";
+    private String classPath = null;  // Need to be null
     private List<MethodInfo> methodInfo;
 
     public String getClassName() {

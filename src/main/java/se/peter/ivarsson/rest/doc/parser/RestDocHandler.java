@@ -31,9 +31,9 @@ import se.peter.ivarsson.rest.doc.sourceParser.JavaSourceParser;
  */
 public class RestDocHandler {
 
-    private URLClassLoader urlClassLoader;
-
     private static final Logger LOGGER = Logger.getLogger(RestDocHandler.class.getSimpleName());
+
+    private URLClassLoader urlClassLoader;
 
     private final JavaSourceParser javaSourceParser = new JavaSourceParser();
 
@@ -45,12 +45,23 @@ public class RestDocHandler {
 
     public static RestInfo restInfo = new RestInfo();
 
+    
+    /**
+     * Used by the write documentation classes
+     */
+    public static Logger getLogger() {
+        
+        return LOGGER;
+    }
+
     /**
      *
      */
     public RestDocHandler(final File classesDirectory, final File sourceDirectory, final File loggingDirectory) {
 
-        init(loggingDirectory);
+        addLoggingFileHandler(loggingDirectory);
+
+        LOGGER.info("REST documentation STARTED analyzing");
 
         ClassLoader currentThreadClassLoader = Thread.currentThread().getContextClassLoader();
 
@@ -103,6 +114,8 @@ public class RestDocHandler {
             ioe.printStackTrace();
         }
 
+        LOGGER.info("REST documentation ENDED analyzing\n");
+
         LOGGER.info(restInfo.toString());
     }
 
@@ -118,6 +131,10 @@ public class RestDocHandler {
             return;
         }
 
+//TODO remove
+if( classInfo.getClassName().equals("CMDResource")) {
+    int i=0;
+}      
         try {
 
             javaSourceParser.parseClassForJavaDocComments(sourceDirectory, javaDocComments, classInfo.getPackageAndClassName());
@@ -290,15 +307,20 @@ public class RestDocHandler {
             classInfo.setMethodInfo(new ArrayList<>());
         }
 
-        String pathValue;
+        StringBuilder restPath = new StringBuilder();
 
-        if (classInfo.getClassPath().length() > 0) {
+        if (!annotation.value().isEmpty() && (annotation.value().charAt(0) != '/')) {
 
-            pathValue = classInfo.getClassPath() + "/" + annotation.value();
+            restPath.append('/');
+        }
+
+        if (annotation.value().endsWith("/")) {
+
+            restPath.append(annotation.value().substring(0, annotation.value().length() - 1));
 
         } else {
-
-            pathValue = annotation.value();
+            
+            restPath.append(annotation.value());
         }
 
         ReturnInfo returnInfo = new ReturnInfo();
@@ -306,9 +328,7 @@ public class RestDocHandler {
         methodInfo.setReturnInfo(returnInfo);
 
         methodInfo.setMethodName(method.getName());
-        methodInfo.setRestPath(pathValue);
-
-        classInfo.getMethodInfo().add(methodInfo);
+        methodInfo.setMethodPath(restPath.toString());
 
         addMethodsPathMethod(methodInfo, returnInfo, method);
         addMethodReturnType(returnInfo, method, classInfo.getPackageAndClassName());
@@ -320,6 +340,8 @@ public class RestDocHandler {
 
             methodInfo.setJavaDoc(javaDocMethodComments);
         }
+
+        classInfo.getMethodInfo().add(methodInfo);
     }
 
     private void addMethodsPathMethod(final MethodInfo methodInfo, final ReturnInfo returnInfo, final Method method) {
@@ -749,28 +771,6 @@ public class RestDocHandler {
         return !method.getReturnType().equals(void.class);
     }
 
-    private void init(final File loggingDirectory) {
-
-        try {
-
-            String logFilePath = loggingDirectory.getAbsolutePath() + "/RestDoc.log";
-
-            int maxSizeOfTheLogFile = 500_000;
-            int maxNumberOfLogFiles = 10;
-
-            FileHandler fileHandler = new FileHandler(logFilePath, maxSizeOfTheLogFile, maxNumberOfLogFiles);
-            SimpleFormatter simpleFormatter = new SimpleFormatter();
-            fileHandler.setFormatter(simpleFormatter);
-            LOGGER.addHandler(fileHandler);
-
-            LOGGER.info("REST documentation started analyzing");
-
-        } catch (IOException ioe) {
-
-            System.out.println(ioe.getMessage());
-        }
-    }
-
     private boolean isDomainData(final String parameterName) {
 
         // Check for 'Java classes' or 'Primitive Data Types'
@@ -847,15 +847,41 @@ public class RestDocHandler {
                 paths.add(pathInfo.getClassPath().replace("^/", ""));
             }
         
-            String totalPath = "";
+            String totalPath = "/";
 
             for(int index = paths.size() - 1; index >= 0;index--) {
 
                 totalPath = totalPath + paths.get(index);
             }
+            
+            if(totalPath.endsWith("/")) {
+                
+                classInfo.setClassRootPath(totalPath.substring(0, totalPath.length() - 1));
 
-            classInfo.setClassRootPath(totalPath);
+            } else {
+                
+                classInfo.setClassRootPath(totalPath);
+            }
         }
     }
 
+    private void addLoggingFileHandler(final File loggingDirectory) {
+
+        try {
+
+            String logFilePath = loggingDirectory.getAbsolutePath() + "/RestDoc.log";
+
+            int maxSizeOfTheLogFile = 1_000_000;
+            int maxNumberOfLogFiles = 10;
+
+            FileHandler fileHandler = new FileHandler(logFilePath, maxSizeOfTheLogFile, maxNumberOfLogFiles);
+            SimpleFormatter simpleFormatter = new SimpleFormatter();
+            fileHandler.setFormatter(simpleFormatter);
+            LOGGER.addHandler(fileHandler);
+
+        } catch (IOException ioe) {
+
+            System.out.println(ioe.getMessage());
+        }
+    }
 }
