@@ -73,6 +73,9 @@
                     <!-- openapi configuration parameters -->
                     <openApiDocVersion>1.0.0</openApiDocVersion>
                     <openApiLicenceName>Apache 2.0</openApiLicenceName>
+                    <openApiDevelopmentServerUrl>https://ncg-test.cybercomhosting.com/services/6</openApiDevelopmentServerUrl>
+                    <openApiStagingServerUrl>https://staging.cybercomhosting.com/services</openApiStagingServerUrl>
+                    <openApiProductionServerUrl>https://production.cybercomhosting.com/services</openApiProductionServerUrl>
                 </configuration>
 
                 <executions>

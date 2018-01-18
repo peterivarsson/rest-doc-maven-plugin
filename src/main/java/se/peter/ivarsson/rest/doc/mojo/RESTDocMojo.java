@@ -10,9 +10,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.logging.FileHandler;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -29,7 +26,7 @@ import se.peter.ivarsson.rest.doc.parser.RestDocHandler;
  */
 public class RESTDocMojo extends AbstractMojo {
 
-   /**
+    /**
      * File path where to find the classes files ( the classes directory )
      *
      * @parameter property="classesDirectory"
@@ -101,9 +98,36 @@ public class RESTDocMojo extends AbstractMojo {
      */
     private String openApiLicenceName;
 
+    /**
+     * Development server where you can test your application.
+     *
+     * @parameter property="openApiDevelopmentServerUrl"
+     * @required
+     * @readonly
+     */
+    private String openApiDevelopmentServerUrl;
+
+    /**
+     * Staging server where you can test your application.
+     *
+     * @parameter property="openApiStagingServerUrl"
+     * @required
+     * @readonly
+     */
+    private String openApiStagingServerUrl;
+
+    /**
+     * Production server where you can test your application.
+     *
+     * @parameter property="openApiProductionServerUrl"
+     * @required
+     * @readonly
+     */
+    private String openApiProductionServerUrl;
+
     @Override
     public void execute() throws MojoExecutionException {
-        
+
         getLog().info("\nRESTDocMojo maven plugin STARTED executing\n");
 
         // avoid execution if classes directory does not exist
@@ -124,13 +148,13 @@ public class RESTDocMojo extends AbstractMojo {
         if (!outputDirectory.exists()) {
 
             Path outputPath = Paths.get(outputDirectory.getAbsolutePath());
-            
+
             try {
 
                 Files.createDirectories(outputPath);
-                
-            } catch(IOException ioe) {
-                
+
+            } catch (IOException ioe) {
+
                 String error = "Can't create output directory: " + outputDirectory;
                 throw new MojoExecutionException(error);
             }
@@ -140,35 +164,35 @@ public class RESTDocMojo extends AbstractMojo {
         if (!loggingDirectory.exists()) {
 
             Path logPath = Paths.get(loggingDirectory.getAbsolutePath());
-            
+
             try {
 
                 Files.createDirectories(logPath);
-                
-            } catch(IOException ioe) {
-                
+
+            } catch (IOException ioe) {
+
                 String error = "Can't create log directory: " + outputDirectory;
                 throw new MojoExecutionException(error);
             }
         }
 
         // Project title
-        if (projectTitle.isEmpty() || (projectTitle == null)) {
+        if ((projectTitle == null) || projectTitle.isEmpty()) {
 
             String error = "Missing project title";
             throw new MojoExecutionException(error);
         }
 
         // Output Type html or openapi
-        if (outputType.isEmpty() || (outputType == null)) {
+        if ((outputType == null) || outputType.isEmpty()) {
 
             String error = "Missing output type (html or openapi)";
             throw new MojoExecutionException(error);
         }
-    
+
         new RestDocHandler(classesDirectory, sourcesDirectory, loggingDirectory);
 
-        if( outputType.equals("html")) {
+        if (outputType.equals("html")) {
 
             getLog().info("\nRESTDocMojo maven plugin creates HTML output files\n");
 
@@ -177,16 +201,24 @@ public class RESTDocMojo extends AbstractMojo {
             htmlOutput.createHTMLDocumantation(outputDirectory, projectTitle);
 
         } else {
-            
-            if (openApiDocVersion.isEmpty() || (openApiDocVersion == null)) {
+
+            if ((openApiDocVersion == null) || openApiDocVersion.isEmpty()) {
 
                 String error = "Missing version of the created OpenApi documentation";
                 throw new MojoExecutionException(error);
             }
 
-            if (openApiLicenceName.isEmpty() || (openApiLicenceName == null)) {
+            if ((openApiLicenceName == null) || openApiLicenceName.isEmpty()) {
 
                 String error = "Missing licence information for the exposed API";
+                throw new MojoExecutionException(error);
+            }
+
+            if (((openApiDevelopmentServerUrl == null) || openApiDevelopmentServerUrl.isEmpty())
+                    && ((openApiStagingServerUrl == null) || openApiStagingServerUrl.isEmpty())
+                    && ((openApiProductionServerUrl == null) || openApiProductionServerUrl.isEmpty())) {
+
+                String error = "Missing server URL for testing this API (All 3 URLs is missing)";
                 throw new MojoExecutionException(error);
             }
 
@@ -194,7 +226,8 @@ public class RESTDocMojo extends AbstractMojo {
 
             OpenApiOutput openApiOutput = new OpenApiOutput();
 
-            openApiOutput.createOpenApiDocumantation(outputDirectory, projectTitle, openApiDocVersion, openApiLicenceName);            
+            openApiOutput.createOpenApiDocumantation(outputDirectory, projectTitle, openApiDocVersion, openApiLicenceName,
+                    openApiDevelopmentServerUrl, openApiStagingServerUrl, openApiProductionServerUrl);
         }
 
         getLog().info("\nRESTDocMojo maven plugin FINISHED executing\n");

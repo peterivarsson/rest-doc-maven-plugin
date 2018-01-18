@@ -292,6 +292,7 @@ public class JavaSourceParser {
 
                                     ResponseType responseType = new ResponseType();
                                     responseType.setReturnStatus("OK");
+                                    responseType.setReturnStatusCode("200");
 
                                     String variableType = responseTypeVariableTypes.get(variableName);
 
@@ -420,13 +421,13 @@ public class JavaSourceParser {
 
                         } else {
 
-                            if(!classPathTemporary.isEmpty()) {
-                                
+                            if (!classPathTemporary.isEmpty()) {
+
                                 pathInfo.setClassPath(classPath + classPathTemporary + '/');
-                                
+
                             } else {
-                                
-                                pathInfo.setClassPath(classPath);                               
+
+                                pathInfo.setClassPath(classPath);
                             }
 
                             classPaths.put(methodReturnType, pathInfo);
@@ -488,7 +489,7 @@ public class JavaSourceParser {
                     }
                 }
             } else {
-                
+
                 if (importClasses.containsKey(pathContent)) {
 
                     classPathTemporary = classPathTemporary + importClasses.get(pathContent);
@@ -555,8 +556,6 @@ public class JavaSourceParser {
     private void findOutHttpStatusCode(final String line, final int responseOffset, final String responseTypeKey,
             final HashMap<String, ResponseType> responseTypes) {
 
-        String status = "";
-
         int responseDotOffset = line.indexOf(".", responseOffset);
         int responseParenthesesStartOffset = line.indexOf("(", responseDotOffset);
 
@@ -570,33 +569,41 @@ public class JavaSourceParser {
 
                 case "accepted":
                     responseType.setReturnStatus("ACCEPTED");
+                    responseType.setReturnStatusCode("202");
                     break;
 
                 case "noContent":
                     responseType.setReturnStatus("NO_CONTENT");
+                    responseType.setReturnStatusCode("204");
                     break;
 
                 case "notAcceptable":
                     responseType.setReturnStatus("NOT_ACCEPTABLE");
+                    responseType.setReturnStatusCode("406");
                     break;
 
                 case "notModified":
                     responseType.setReturnStatus("NOT_MODIFIED");
+                    responseType.setReturnStatusCode("304");
                     break;
 
                 case "ok":
                     responseType.setReturnStatus("OK");
+                    responseType.setReturnStatusCode("200");
                     break;
 
                 case "serverError":
                     responseType.setReturnStatus("INTERNAL_SERVER_ERROR");
+                    responseType.setReturnStatusCode("500");
                     break;
 
                 case "status":
-                    responseType.setReturnStatus(parseHttpStatusFromStatusMethod(line, responseParenthesesStartOffset));
+                    parseHttpStatusFromStatusMethod(line, responseParenthesesStartOffset, responseType);
                     break;
 
                 default:
+                    responseType.setReturnStatus("OK");
+                    responseType.setReturnStatusCode("200");
                     break;
             }
 
@@ -604,7 +611,7 @@ public class JavaSourceParser {
         }
     }
 
-    private String parseHttpStatusFromStatusMethod(final String line, final int responseParenthesesStartOffset) {
+    private void parseHttpStatusFromStatusMethod(final String line, final int responseParenthesesStartOffset, final ResponseType responseType) {
 
         int statusStatusCodeBeginningOffset = line.indexOf("Response.Status.", responseParenthesesStartOffset);
 
@@ -614,11 +621,129 @@ public class JavaSourceParser {
 
             if (responseParenthesesEndOffset != -1) {
 
-                return line.substring(statusStatusCodeBeginningOffset + 16, responseParenthesesEndOffset).trim();
+                String status = line.substring(statusStatusCodeBeginningOffset + 16, responseParenthesesEndOffset).trim();
+
+                responseType.setReturnStatus(status);
+                responseType.setReturnStatusCode(getStatusCodeFromStatusName(status));
             }
         }
+    }
 
-        return null;
+    private String getStatusCodeFromStatusName(final String statusName) {
+
+        switch (statusName.toUpperCase()) {
+
+            case "ACCEPTED":
+                return "202";
+
+            case "BAD_GATEWAY":
+                return "502";
+
+            case "BAD_REQUEST":
+                return "400";
+
+            case "CONFLICT":
+                return "409";
+
+            case "CREATED":
+                return "201";
+
+            case "EXPECTATION_FAILED":
+                return "417";
+
+            case "FORBIDDEN":
+                return "403";
+
+            case "FOUND":
+                return "302";
+
+            case "GATEWAY_TIMEOUT":
+                return "504";
+
+            case "GONE":
+                return "410";
+
+            case "HTTP_VERSION_NOT_SUPPORTED":
+                return "505";
+
+            case "INTERNAL_SERVER_ERROR":
+                return "500";
+
+            case "LENGTH_REQUIRED":
+                return "411";
+
+            case "METHOD_NOT_ALLOWED":
+                return "405";
+
+            case "MOVED_PERMANENTLY":
+                return "301";
+
+            case "NO_CONTENT":
+                return "204";
+
+            case "NOT_ACCEPTABLE":
+                return "406";
+
+            case "NOT_FOUND":
+                return "404";
+
+            case "NOT_IMPLEMENTED":
+                return "501";
+
+            case "NOT_MODIFIED":
+                return "304";
+
+            case "OK":
+                return "200";
+
+            case "PARTIAL_CONTENT":
+                return "206";
+
+            case "PAYMENT_REQUIRED":
+                return "402";
+
+            case "PRECONDITION_FAILED":
+                return "412";
+
+            case "PROXY_AUTHENTICATION_REQUIRED":
+                return "407";
+
+            case "REQUEST_ENTITY_TOO_LARGE":
+                return "413";
+
+            case "REQUEST_TIMEOUT":
+                return "408";
+
+            case "REQUEST_URI_TOO_LONG":
+                return "414";
+
+            case "REQUESTED_RANGE_NOT_SATISFIABLE":
+                return "416";
+
+            case "RESET_CONTENT":
+                return "205";
+
+            case "SEE_OTHER":
+                return "303";
+
+            case "SERVICE_UNAVAILABLE":
+                return "503";
+
+            case "TEMPORARY_REDIRECT":
+                return "307";
+
+            case "UNAUTHORIZED":
+                return "401";
+
+            case "UNSUPPORTED_MEDIA_TYPE":
+                return "415";
+
+            case "USE_PROXY":
+                return "305";
+
+            default:
+                return "200";
+        }
     }
 
     private void addVariableAndTypeToHashList(final String line) {

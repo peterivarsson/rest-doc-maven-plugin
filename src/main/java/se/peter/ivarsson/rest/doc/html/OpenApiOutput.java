@@ -16,6 +16,7 @@ import java.util.HashMap;
 import se.peter.ivarsson.rest.doc.parser.ClassInfo;
 import se.peter.ivarsson.rest.doc.parser.DataModelInfo;
 import se.peter.ivarsson.rest.doc.parser.MethodInfo;
+import se.peter.ivarsson.rest.doc.parser.ParameterInfo;
 import se.peter.ivarsson.rest.doc.parser.RestDocHandler;
 
 /**
@@ -27,11 +28,14 @@ public class OpenApiOutput {
     private final HashMap<String, String> components = new HashMap<>();
     private final HashMap<String, String> methodPaths = new HashMap<>();
 
-    public void createOpenApiDocumantation(final File outputDirectory, final String projectTitle, final String openApiDocVersion, final String openApiLicenceName) {
+    public void createOpenApiDocumantation(final File outputDirectory, final String projectTitle, final String openApiDocVersion,
+            final String openApiLicenceName, final String openApiDevelopmentServerUrl, 
+            final String openApiStagingServerUrl, final String openApiProductionServerUrl) {
 
-        StringBuilder openApiBuffer = new StringBuilder("openapi: \"3.0.0\"\n");
+        StringBuilder openApiBuffer = new StringBuilder("openapi: \"3.0.1\"\n");
 
-        writeOpenApiInfo(openApiBuffer, projectTitle, openApiDocVersion, openApiLicenceName);
+        writeOpenApiInfo(openApiBuffer, projectTitle, openApiDocVersion, openApiLicenceName, 
+                openApiDevelopmentServerUrl, openApiStagingServerUrl, openApiProductionServerUrl);
 
         writePaths(openApiBuffer);
 
@@ -40,7 +44,9 @@ public class OpenApiOutput {
         writeOpenApiToFile(outputDirectory, openApiBuffer, projectTitle);
     }
 
-    private void writeOpenApiInfo(final StringBuilder openApiBuffer, final String projectTitle, final String openApiDocVersion, final String openApiLicenceName) {
+    private void writeOpenApiInfo(final StringBuilder openApiBuffer, final String projectTitle, final String openApiDocVersion,
+            final String openApiLicenceName, final String openApiDevelopmentServerUrl, 
+            final String openApiStagingServerUrl, final String openApiProductionServerUrl) {
 
         openApiBuffer.append("info:\n");
         openApiBuffer.append("  title: ");
@@ -52,7 +58,25 @@ public class OpenApiOutput {
         openApiBuffer.append("  license:\n");
         openApiBuffer.append("    name: ");
         openApiBuffer.append(openApiLicenceName);
-        openApiBuffer.append("\n");
+        openApiBuffer.append("\nservers:\n");
+        if(openApiDevelopmentServerUrl != null) {
+            
+            openApiBuffer.append("  - url: ");
+            openApiBuffer.append(openApiDevelopmentServerUrl);
+            openApiBuffer.append("\n    description: Development server\n");
+        }
+        if(openApiStagingServerUrl != null) {
+            
+            openApiBuffer.append("  - url: ");
+            openApiBuffer.append(openApiStagingServerUrl);
+            openApiBuffer.append("\n    description: Staging server\n");
+        }
+        if(openApiProductionServerUrl != null) {
+            
+            openApiBuffer.append("  - url: ");
+            openApiBuffer.append(openApiProductionServerUrl);
+            openApiBuffer.append("\n    description: Production server\n");
+        }
     }
 
     private void writePaths(final StringBuilder openApiBuffer) {
@@ -65,11 +89,11 @@ public class OpenApiOutput {
 
                     addMethodPaths(classInfo);
                 });
-        
+
         methodPaths.entrySet().stream()
-                .sorted((e1, e2) ->  e1.getKey().compareTo(e2.getKey()))
+                .sorted((e1, e2) -> e1.getKey().compareTo(e2.getKey()))
                 .forEach(entrySet -> {
-                    
+
                     openApiBuffer.append(entrySet.getKey());
                     openApiBuffer.append(entrySet.getValue());
                 });
@@ -85,7 +109,7 @@ public class OpenApiOutput {
                     RestDocHandler.getLogger().fine(() -> "ClassPath: " + classinfo.getClassPath());
                     RestDocHandler.getLogger().fine(() -> "methodInfo.getMethodPath: " + methodInfo.getMethodPath());
 
-                    StringBuilder methodPath = new StringBuilder();
+                    StringBuilder methodPath = new StringBuilder("  ");
 
                     methodPath.append(classinfo.getClassRootPath());
                     methodPath.append(classinfo.getClassPath());
@@ -101,43 +125,36 @@ public class OpenApiOutput {
                         pathContent.append(existingPaths);
                     }
 
-//                    openApiBuffer.append(methodPath);
-//TODO remove
-                    System.out.println("ClassRootPath:          " + classinfo.getClassRootPath());
-                    System.out.println("ClassPath:              " + classinfo.getClassPath());
-                    System.out.println("methodInfo.getMethodPath: " + methodInfo.getMethodPath());
-                    System.out.println("Resulting methodPath:   " + methodPath + "\n");
-
                     pathContent.append("    ");
                     pathContent.append(methodInfo.getHttpRequestType().toLowerCase());
-                    pathContent.append(":\n      ");
-                    pathContent.append("description: ");
+                    pathContent.append(":\n      description: ");
                     pathContent.append(onlyJavaDocComments(methodInfo.getJavaDoc()));
+                    pathContent.append("\n      operationId: ");
+                    pathContent.append(methodInfo.getMethodName());
+                    pathContent.append("\n      responses: ");
+                    pathContent.append("\n        '");
+                    pathContent.append(methodInfo.getReturnInfo().getReturnStatusCode());
+                    pathContent.append("':");
+                    pathContent.append("\n          description: ");
+                    pathContent.append(methodInfo.getReturnInfo().getReturnStatus());
                     pathContent.append("\n      parameters:");
                     methodInfo.getParameterInfo().stream()
                             .forEach(parameter -> {
 
+                                String type = null;
+
                                 switch (parameter.getParameterType()) {
 
                                     case "javax.ws.rs.PathParam":
-                                        pathContent.append("\n        - name: ");
-                                        pathContent.append(parameter.getParameterAnnotationName());
-                                        pathContent.append("\n          in: ");
-                                        pathContent.append("path");
+                                        addParameterYaml(pathContent, "path", parameter);
                                         break;
 
                                     case "javax.ws.rs.HeaderParam":
-                                        pathContent.append("\n        - name: ");
-                                        pathContent.append(parameter.getParameterAnnotationName());
-                                        pathContent.append("\n          in: ");
-                                        pathContent.append("header");
+                                        addParameterYaml(pathContent, "header", parameter);
                                         break;
 
                                     case "javax.ws.rs.QueryParam":
-                                        pathContent.append("\n        - name: ");
-                                        pathContent.append(parameter.getParameterAnnotationName());
-                                        pathContent.append("\n          in: ");
-                                        pathContent.append("query");
+                                        addParameterYaml(pathContent, "query", parameter);
                                         break;
                                 }
 
@@ -156,9 +173,34 @@ public class OpenApiOutput {
                     }
 
                     pathContent.append("\n");
-                    
+
                     methodPaths.put(methodPath.toString(), pathContent.toString());
                 });
+    }
+
+    private void addParameterYaml(final StringBuilder pathContent, final String inWhere, final ParameterInfo parameter) {
+
+        String type;
+
+        pathContent.append("\n        - name: ");
+        pathContent.append(parameter.getParameterAnnotationName());
+        pathContent.append("\n          in: ");
+        pathContent.append(inWhere);
+        if (inWhere.equals("path")) {
+
+            pathContent.append("\n          required: true");
+        }
+        pathContent.append("\n          schema:");
+        pathContent.append("\n            type: ");
+        type = mapFieldType(parameter.getParameterClassName());
+        pathContent.append(type);
+        pathContent.append("\n          style: simple");
+        if (type.equals("array")) {
+
+            pathContent.append("\n            items:");
+            pathContent.append("\n              type: ");
+            pathContent.append(mapFieldType(getListType(parameter.getParameterClassName())));
+        }
     }
 
     private void addRequestBodyInfo(final StringBuilder openApiBuffer, final MethodInfo methodInfo) {
@@ -219,8 +261,12 @@ public class OpenApiOutput {
                         component.append("\n        ");
                         component.append(field.getFieldName());
                         component.append(":");
-                        component.append("\n          type: ");
+                        component.append("\n          ");
                         String fieldType = mapFieldType(field.getFieldType());
+                        if (!fieldType.startsWith("$ref:")) {
+
+                            component.append("type: ");
+                        }
                         component.append(fieldType);
                         if (fieldType.equals("array")) {
 
@@ -281,28 +327,48 @@ public class OpenApiOutput {
                 return "array";
 
             default:
-                int lastDot = field.lastIndexOf('.');
+                if (field.startsWith("java.util.List")) {
 
-                if (lastDot > 0) {
-
-                    String componentName = field.substring(lastDot + 1);
-
-                    StringBuilder componentRef = new StringBuilder("$ref: '#/components/schemas/");
-
-                    componentRef.append(componentName);
-                    componentRef.append("'");
-
-                    DataModelInfo restBodyDataModel = RestDocHandler.restInfo.getDomainDataMap().get(field);
-
-                    addComponent(componentName, field);
-
-                    return componentRef.toString();
+                    return "array";
 
                 } else {
 
-                    return field;
+                    int lastDot = field.lastIndexOf('.');
+
+                    if (lastDot > 0) {
+
+                        String componentName = field.substring(lastDot + 1);
+
+                        StringBuilder componentRef = new StringBuilder("$ref: '#/components/schemas/");
+
+                        componentRef.append(componentName);
+                        componentRef.append("'");
+
+                        DataModelInfo restBodyDataModel = RestDocHandler.restInfo.getDomainDataMap().get(field);
+
+                        addComponent(componentName, field);
+
+                        return componentRef.toString();
+
+                    } else {
+
+                        return field;
+                    }
                 }
         }
+    }
+
+    private String getListType(final String className) {
+
+        int startIndex = className.indexOf('<');
+        int endIndex = className.indexOf('>');
+
+        if ((startIndex > 0) && (endIndex > startIndex)) {
+
+            return className.substring(startIndex + 1, endIndex).trim();
+        }
+
+        return "";
     }
 
     private String onlyJavaDocComments(String javaDoc) {

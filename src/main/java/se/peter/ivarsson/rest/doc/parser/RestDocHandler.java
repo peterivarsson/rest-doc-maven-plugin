@@ -131,10 +131,6 @@ public class RestDocHandler {
             return;
         }
 
-//TODO remove
-if( classInfo.getClassName().equals("CMDResource")) {
-    int i=0;
-}      
         try {
 
             javaSourceParser.parseClassForJavaDocComments(sourceDirectory, javaDocComments, classInfo.getPackageAndClassName());
@@ -446,6 +442,7 @@ if( classInfo.getClassName().equals("CMDResource")) {
 
             returnInfo.setReturnClassName(returnTypeName);
             returnInfo.setReturnStatus(responseType.getReturnStatus());
+            returnInfo.setReturnStatusCode(responseType.getReturnStatusCode());
 
         } else {
 

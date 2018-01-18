@@ -13,6 +13,7 @@ public class ResponseType {
 
     private String returnType;
     private String returnStatus;
+    private String returnStatusCode;
 
     public String getReturnType() {
         return returnType;
@@ -30,8 +31,16 @@ public class ResponseType {
         this.returnStatus = returnStatus;
     }
 
+    public String getReturnStatusCode() {
+        return returnStatusCode;
+    }
+
+    public void setReturnStatusCode(String returnStatusCode) {
+        this.returnStatusCode = returnStatusCode;
+    }
+
     @Override
     public String toString() {
-        return "ResponseType{" + "returnType=" + returnType + ", returnStatus=" + returnStatus + '}';
+        return "ResponseType{" + "returnType=" + returnType + ", returnStatus=" + returnStatus + ", returnStatusCode=" + returnStatusCode + '}';
     }
 }

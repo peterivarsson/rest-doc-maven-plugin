@@ -3,7 +3,7 @@
 ## What does this Maven plugin do
 
 It parses the classes and sources files for JAX-RS Annotations and JavaDoc comments.
-It creates a index.html file in "output" directory.
+It creates a index.html or a yaml file in "output" directory.
 
 ## Plugin configuration
 
@@ -30,6 +30,9 @@ Put below configurations in your pom.xml, and modify the paths for your needs.
         <!-- Mandatory openapi configuration parameters -->
         <openApiDocVersion>1.0.0</openApiDocVersion>
         <openApiLicenceName>Apache 2.0</openApiLicenceName>
+        <openApiDevelopmentServerUrl>https://test.cybercom.com/services</openApiDevelopmentServerUrl>
+        <openApiStagingServerUrl>https://staging.cybercom.com/services</openApiStagingServerUrl>
+        <openApiProductionServerUrl>https://production.cybercom.com/services</openApiProductionServerUrl>
     </configuration>
 
     <executions>
