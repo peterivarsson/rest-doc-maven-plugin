@@ -45,12 +45,11 @@ public class RestDocHandler {
 
     public static RestInfo restInfo = new RestInfo();
 
-    
     /**
      * Used by the write documentation classes
      */
     public static Logger getLogger() {
-        
+
         return LOGGER;
     }
 
@@ -105,6 +104,7 @@ public class RestDocHandler {
                     .forEach(classinfo -> {
 
                         updatePaths(classinfo);
+                        updateParameters(classinfo);
                     });
 
         } catch (IOException ioe) {
@@ -315,7 +315,7 @@ public class RestDocHandler {
             restPath.append(annotation.value().substring(0, annotation.value().length() - 1));
 
         } else {
-            
+
             restPath.append(annotation.value());
         }
 
@@ -728,7 +728,7 @@ public class RestDocHandler {
                             break;
 
                         case '9':
-                           parameterInfo.setParameterAnnotationName("Tenth argument");
+                            parameterInfo.setParameterAnnotationName("Tenth argument");
                             break;
 
                         default:
@@ -820,6 +820,9 @@ public class RestDocHandler {
         return true;
     }
 
+    /*
+     * Update class root path
+     */
     private void updatePaths(ClassInfo classInfo) {
 
         if (classPaths.containsKey(classInfo.getPackageAndClassName())) {
@@ -843,21 +846,88 @@ public class RestDocHandler {
 
                 paths.add(pathInfo.getClassPath().replace("^/", ""));
             }
-        
+
             String totalPath = "/";
 
-            for(int index = paths.size() - 1; index >= 0;index--) {
+            for (int index = paths.size() - 1; index >= 0; index--) {
 
                 totalPath = totalPath + paths.get(index);
             }
-            
-            if(totalPath.endsWith("/")) {
-                
+
+            if (totalPath.endsWith("/")) {
+
                 classInfo.setClassRootPath(totalPath.substring(0, totalPath.length() - 1));
 
             } else {
-                
+
                 classInfo.setClassRootPath(totalPath);
+            }
+        }
+    }
+
+    /*
+     * Update parameters with parameters from class root path
+     */
+    private void updateParameters(ClassInfo classInfo) {
+
+        final List<String> rootPathParameters = new ArrayList<>();
+
+        final String classRootPath = classInfo.getClassRootPath();
+
+        if (!classRootPath.isEmpty()) {
+
+            int startParameterIndex = classInfo.getClassRootPath().indexOf('{');
+
+            if (startParameterIndex != -1) {
+
+                int endParameterIndex = classInfo.getClassRootPath().indexOf('}', startParameterIndex);
+
+                if (endParameterIndex != -1) {
+
+                    while ((startParameterIndex != -1) && (endParameterIndex != -1)) {
+
+                        String parameter = classRootPath.substring(startParameterIndex + 1, endParameterIndex).trim();
+
+                        rootPathParameters.add(parameter);
+
+                        startParameterIndex = classInfo.getClassRootPath().indexOf('{', endParameterIndex);
+
+                        if (startParameterIndex != -1) {
+
+                            endParameterIndex = classInfo.getClassRootPath().indexOf('}', startParameterIndex);
+                        }
+                    }
+                }
+            }
+
+            if(!rootPathParameters.isEmpty()) {
+
+                List<ParameterInfo> rootParameterInfo = new ArrayList<>();
+                
+                rootPathParameters.stream()
+                        .forEach(parameter -> {
+                            
+                            ParameterInfo parameterInfo = new ParameterInfo();
+                            
+                            parameterInfo.setParameterAnnotationName(parameter);
+                            parameterInfo.setParameterClassName("java.lang.String");
+                            parameterInfo.setParameterType("javax.ws.rs.PathParam");
+                            
+                            rootParameterInfo.add(parameterInfo);
+                        });
+ 
+                classInfo.getMethodInfo().stream()
+                        .forEach(methodInfo -> {
+                            
+                           List<ParameterInfo> backupOldParameterInfo = methodInfo.getParameterInfo();
+                           
+                           List<ParameterInfo> newParameterInfo = new ArrayList<>();
+                           
+                           newParameterInfo.addAll(rootParameterInfo);
+                           newParameterInfo.addAll(backupOldParameterInfo);
+                           
+                           methodInfo.setParameterInfo(newParameterInfo);
+                        });
             }
         }
     }

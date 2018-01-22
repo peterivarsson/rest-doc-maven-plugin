@@ -27,12 +27,13 @@ Put below configurations in your pom.xml, and modify the paths for your needs.
         <projectTitle>Mobile backend</projectTitle>
         <!-- outputType html or openapi -->
         <outputType>html</outputType>
-        <!-- Mandatory openapi configuration parameters -->
-        <openApiDocVersion>1.0.0</openApiDocVersion>
-        <openApiLicenceName>Apache 2.0</openApiLicenceName>
-        <openApiDevelopmentServerUrl>https://test.cybercom.com/services</openApiDevelopmentServerUrl>
-        <openApiStagingServerUrl>https://staging.cybercom.com/services</openApiStagingServerUrl>
-        <openApiProductionServerUrl>https://production.cybercom.com/services</openApiProductionServerUrl>
+        <!-- Mandatory openapi configuration parameters, if openapi output is chosen above -->
+           <openApiDocVersion>1.0.0</openApiDocVersion>
+           <openApiLicenceName>Apache 2.0</openApiLicenceName>
+           <!-- openapi at least one of the servers below is needed to be defined -->
+           <openApiDevelopmentServerUrl>https://test.cybercom.com/services</openApiDevelopmentServerUrl>
+           <openApiStagingServerUrl>https://staging.cybercom.com/services</openApiStagingServerUrl>
+           <openApiProductionServerUrl>https://production.cybercom.com/services</openApiProductionServerUrl>
     </configuration>
 
     <executions>

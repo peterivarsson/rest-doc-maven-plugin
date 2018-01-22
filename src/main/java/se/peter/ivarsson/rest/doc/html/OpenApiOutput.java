@@ -16,6 +16,7 @@ import java.util.HashMap;
 import se.peter.ivarsson.rest.doc.parser.ClassInfo;
 import se.peter.ivarsson.rest.doc.parser.DataModelInfo;
 import se.peter.ivarsson.rest.doc.parser.MethodInfo;
+import se.peter.ivarsson.rest.doc.parser.OpenApiField;
 import se.peter.ivarsson.rest.doc.parser.ParameterInfo;
 import se.peter.ivarsson.rest.doc.parser.RestDocHandler;
 
@@ -29,12 +30,12 @@ public class OpenApiOutput {
     private final HashMap<String, String> methodPaths = new HashMap<>();
 
     public void createOpenApiDocumantation(final File outputDirectory, final String projectTitle, final String openApiDocVersion,
-            final String openApiLicenceName, final String openApiDevelopmentServerUrl, 
+            final String openApiLicenceName, final String openApiDevelopmentServerUrl,
             final String openApiStagingServerUrl, final String openApiProductionServerUrl) {
 
         StringBuilder openApiBuffer = new StringBuilder("openapi: \"3.0.1\"\n");
 
-        writeOpenApiInfo(openApiBuffer, projectTitle, openApiDocVersion, openApiLicenceName, 
+        writeOpenApiInfo(openApiBuffer, projectTitle, openApiDocVersion, openApiLicenceName,
                 openApiDevelopmentServerUrl, openApiStagingServerUrl, openApiProductionServerUrl);
 
         writePaths(openApiBuffer);
@@ -45,7 +46,7 @@ public class OpenApiOutput {
     }
 
     private void writeOpenApiInfo(final StringBuilder openApiBuffer, final String projectTitle, final String openApiDocVersion,
-            final String openApiLicenceName, final String openApiDevelopmentServerUrl, 
+            final String openApiLicenceName, final String openApiDevelopmentServerUrl,
             final String openApiStagingServerUrl, final String openApiProductionServerUrl) {
 
         openApiBuffer.append("info:\n");
@@ -59,20 +60,20 @@ public class OpenApiOutput {
         openApiBuffer.append("    name: ");
         openApiBuffer.append(openApiLicenceName);
         openApiBuffer.append("\nservers:\n");
-        if(openApiDevelopmentServerUrl != null) {
-            
+        if (openApiDevelopmentServerUrl != null) {
+
             openApiBuffer.append("  - url: ");
             openApiBuffer.append(openApiDevelopmentServerUrl);
             openApiBuffer.append("\n    description: Development server\n");
         }
-        if(openApiStagingServerUrl != null) {
-            
+        if (openApiStagingServerUrl != null) {
+
             openApiBuffer.append("  - url: ");
             openApiBuffer.append(openApiStagingServerUrl);
             openApiBuffer.append("\n    description: Staging server\n");
         }
-        if(openApiProductionServerUrl != null) {
-            
+        if (openApiProductionServerUrl != null) {
+
             openApiBuffer.append("  - url: ");
             openApiBuffer.append(openApiProductionServerUrl);
             openApiBuffer.append("\n    description: Production server\n");
@@ -137,6 +138,20 @@ public class OpenApiOutput {
                     pathContent.append("':");
                     pathContent.append("\n          description: ");
                     pathContent.append(methodInfo.getReturnInfo().getReturnStatus());
+
+                    if(methodInfo.getReturnInfo().getReturnClassName().startsWith("java.util.List")) {
+
+                        addPathContent(pathContent, methodInfo);
+
+                    } else {
+                        
+                        if(!methodInfo.getReturnInfo().getReturnClassName().startsWith("java")) {
+
+                            addPathContent(pathContent, methodInfo);
+
+                        }
+                    }
+
                     pathContent.append("\n      parameters:");
                     methodInfo.getParameterInfo().stream()
                             .forEach(parameter -> {
@@ -178,28 +193,60 @@ public class OpenApiOutput {
                 });
     }
 
+    private void addPathContent(final StringBuilder pathContent, MethodInfo methodInfo) {
+
+        pathContent.append("\n          content: ");
+        pathContent.append("\n            ");
+        if (methodInfo.getProduceType().isEmpty()) {
+            
+            // Default to 'application/json'
+            pathContent.append("application/json");
+            
+        } else {
+            
+            pathContent.append(methodInfo.getProduceType());
+        }
+        pathContent.append(":\n              schema:");
+        pathContent.append("\n                ");
+        OpenApiField openApiField = mapFieldType(methodInfo.getReturnInfo().getReturnClassName());
+        pathContent.append(openApiField.getFieldType());
+    }
+
     private void addParameterYaml(final StringBuilder pathContent, final String inWhere, final ParameterInfo parameter) {
 
-        String type;
+        OpenApiField type;
 
-        pathContent.append("\n        - name: ");
-        pathContent.append(parameter.getParameterAnnotationName());
-        pathContent.append("\n          in: ");
+        pathContent.append("\n        - in: ");
         pathContent.append(inWhere);
+        pathContent.append("\n          name: ");
+        pathContent.append(parameter.getParameterAnnotationName());
         if (inWhere.equals("path")) {
 
             pathContent.append("\n          required: true");
+
         }
         pathContent.append("\n          schema:");
         pathContent.append("\n            type: ");
         type = mapFieldType(parameter.getParameterClassName());
-        pathContent.append(type);
-        pathContent.append("\n          style: simple");
+        pathContent.append(type.getFieldType());
         if (type.equals("array")) {
 
             pathContent.append("\n            items:");
             pathContent.append("\n              type: ");
-            pathContent.append(mapFieldType(getListType(parameter.getParameterClassName())));
+            type = mapFieldType(getListType(parameter.getParameterClassName()));
+            pathContent.append(type.getFieldType());
+            if (type.getFieldFormat() != null) {
+
+                pathContent.append("\n              format: ");
+                pathContent.append(type.getFieldFormat());
+            }
+        } else {
+
+            if (type.getFieldFormat() != null) {
+
+                pathContent.append("\n            format: ");
+                pathContent.append(type.getFieldFormat());
+            }
         }
     }
 
@@ -222,10 +269,10 @@ public class OpenApiOutput {
             openApiBuffer.append("application/json':");
         }
 
-        addOpenApiComponents(openApiBuffer, methodInfo);
+        addOpenApiComponentReference(openApiBuffer, methodInfo);
     }
 
-    private void addOpenApiComponents(final StringBuilder openApiBuffer, final MethodInfo methodInfo) {
+    private void addOpenApiComponentReference(final StringBuilder openApiBuffer, final MethodInfo methodInfo) {
 
         int lastDot = methodInfo.getRequestBodyClassName().lastIndexOf('.');
 
@@ -243,6 +290,12 @@ public class OpenApiOutput {
     }
 
     private void addComponent(final String componentName, final String className) {
+
+        if (className.startsWith("java")) {
+
+            // Don't add component
+            return;
+        }
 
         StringBuilder component = new StringBuilder();
 
@@ -262,17 +315,32 @@ public class OpenApiOutput {
                         component.append(field.getFieldName());
                         component.append(":");
                         component.append("\n          ");
-                        String fieldType = mapFieldType(field.getFieldType());
-                        if (!fieldType.startsWith("$ref:")) {
+                        OpenApiField openApiField = mapFieldType(field.getFieldType());
+
+                        if (!openApiField.getFieldType().startsWith("$ref:")) {
 
                             component.append("type: ");
                         }
-                        component.append(fieldType);
-                        if (fieldType.equals("array")) {
+
+                        component.append(openApiField.getFieldType());
+
+                        if (openApiField.getFieldFormat() != null) {
+
+                            component.append("\n          format: ");
+                            component.append(openApiField.getFieldFormat());
+                        }
+
+                        if (openApiField.getFieldType().equals("array")) {
 
                             component.append("\n          items:");
-                            component.append("\n            ");
-                            component.append(mapFieldType(field.getListOfType()));
+
+                            OpenApiField openApiItemnField = mapFieldType(field.getListOfType());
+
+                            if (openApiItemnField.getFieldType().startsWith("$ref")) {
+
+                                component.append("\n              ");
+                                component.append(openApiItemnField.getFieldType());
+                            }
                         }
                     });
 
@@ -292,63 +360,109 @@ public class OpenApiOutput {
         });
     }
 
-    private String mapFieldType(final String field) {
+    private OpenApiField mapFieldType(final String javaField) {
 
-        switch (field) {
+        OpenApiField field = new OpenApiField();
+
+        switch (javaField) {
 
             case "int":
             case "java.lang.Integer":
-                return "int32";
+                field.setFieldType("integer");
+                field.setFieldFormat("int32");
+                return field;
 
             case "long":
             case "java.lang.Long":
-                return "int64";
+                field.setFieldType("integer");
+                field.setFieldFormat("int64");
+                return field;
+
+            case "float":
+            case "java.lang.Float":
+                field.setFieldType("number");
+                field.setFieldFormat("float");
+                return field;
+
+            case "double":
+            case "java.lang.Double":
+                field.setFieldType("number");
+                field.setFieldFormat("double");
+                return field;
 
             case "java.lang.String":
-                return "string";
+                field.setFieldType("string");
+                return field;
+
+            case "byte":
+            case "java.lang.Byte":
+                field.setFieldType("string");
+                field.setFieldFormat("byte");
+                return field;
 
             case "boolean":
             case "java.lang.Boolean":
-                return "boolean";
-
-            case "java.lang.Double":
-                return "double";
-
-            case "java.lang.Float":
-                return "float";
+                field.setFieldType("boolean");
+                return field;
 
             case "java.util.Date":
-                return "date";
-
-            case "java.lang.Byte":
-                return "byte";
+                field.setFieldType("string");
+                field.setFieldFormat("date");
+                return field;
 
             case "java.util.List":
-                return "array";
+                field.setFieldType("array");
+                return field;
 
             default:
-                if (field.startsWith("java.util.List")) {
+                if (javaField.endsWith("java.net.URI")) {
 
-                    return "array";
+                    field.setFieldType("string");
+                    return field;
+                }
+               
+                if (javaField.startsWith("java.util.List")) {
+
+                    field.setFieldType("array");
+                    return field;
 
                 } else {
 
-                    int lastDot = field.lastIndexOf('.');
+                    int lastDot = javaField.lastIndexOf('.');
 
                     if (lastDot > 0) {
 
-                        String componentName = field.substring(lastDot + 1);
+                        String componentName;
+
+                        int lessThanIndex = -1;
+                        int greaterThanIndex = javaField.lastIndexOf('>');
+
+                        if (greaterThanIndex == -1) {
+
+                            componentName = javaField.substring(lastDot + 1);
+
+                        } else {
+
+                            componentName = javaField.substring(lastDot + 1, greaterThanIndex);
+                            lessThanIndex = javaField.lastIndexOf('<');
+                        }
 
                         StringBuilder componentRef = new StringBuilder("$ref: '#/components/schemas/");
 
                         componentRef.append(componentName);
                         componentRef.append("'");
 
-                        DataModelInfo restBodyDataModel = RestDocHandler.restInfo.getDomainDataMap().get(field);
+                        if (lessThanIndex == -1) {
 
-                        addComponent(componentName, field);
+                            addComponent(componentName, javaField);
 
-                        return componentRef.toString();
+                        } else {
+
+                            addComponent(componentName, javaField.substring(lessThanIndex + 1, greaterThanIndex));
+                        }
+
+                        field.setFieldType(componentRef.toString());
+                        return field;
 
                     } else {
 
