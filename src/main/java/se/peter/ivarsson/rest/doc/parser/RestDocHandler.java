@@ -672,6 +672,7 @@ public class RestDocHandler {
             restInfo.getDomainDataMap().put(className, dataModelInfo);
             FieldInfo fieldInfo = new FieldInfo();
             fieldInfo.setFieldName("error");
+            fieldInfo.setFieldType("error");
             dataModelInfo.getFields().add(fieldInfo);
         }
 
