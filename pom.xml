@@ -63,8 +63,8 @@
                 <version>${project.version}</version>
                 <configuration>
                     <!-- Specify the RESTDoc parameters -->
-                    <classesDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-test-mini-mobilebackend-api/target/classes</classesDirectory>
-                    <sourcesDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-test-mini-mobilebackend-api/src/main/java</sourcesDirectory>
+                    <classesDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-test-mobilebackend-api/target/classes</classesDirectory>
+                    <sourcesDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-test-mobilebackend-api/src/main/java</sourcesDirectory>
                     <outputDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-output-directory</outputDirectory>
                     <loggingDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-logging-directory</loggingDirectory>
                     <projectTitle>Mobile backend</projectTitle>

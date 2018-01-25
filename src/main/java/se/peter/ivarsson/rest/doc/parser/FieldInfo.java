@@ -13,7 +13,7 @@ public class FieldInfo {
 
     String fieldName;
     String fieldType;
-    String listOfType = "";   // List of type
+    String fieldOfType = "";   // List, Set, Map, Enum types
 
     public String getFieldName() {
         return fieldName;
@@ -31,16 +31,16 @@ public class FieldInfo {
         this.fieldType = fieldType;
     }
 
-    public String getListOfType() {
-        return listOfType;
+    public String getFieldOfType() {
+        return fieldOfType;
     }
 
-    public void setListOfType(String listOfType) {
-        this.listOfType = listOfType;
+    public void setFieldOfType(String fieldOfType) {
+        this.fieldOfType = fieldOfType;
     }
 
     @Override
     public String toString() {
-        return " FieldInfo{" + "\n         fieldName=" + fieldName + ",\n         fieldType=" + fieldType + ",\n         listOfType=" + listOfType + "\n      }";
+        return " FieldInfo{" + "\n         fieldName=" + fieldName + ",\n         fieldType=" + fieldType + ",\n         fieldOfType=" + fieldOfType + "\n      }";
     }
 }

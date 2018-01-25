@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 import se.peter.ivarsson.rest.doc.parser.PathInfo;
@@ -178,7 +179,7 @@ public class JavaSourceParser {
 
                 addImportStatementToMap(line);
 
-                findEnumsInFile(line, javaEnums, sourceFilePath, isClass[0], enumListForClass);
+                findEnumsInFile(line, javaEnums, sourceFilePath, isClass[0], enumListForClass, urlClassLoader);
 
                 findResponseOkType(line, responseTypes, className);
 
@@ -194,7 +195,7 @@ public class JavaSourceParser {
     }
 
     private void findEnumsInFile(final String line, final HashMap<String, String> javaEnums, final Path sourceFilePath,
-            final Boolean inClass, final String enumListForClass) {
+            final Boolean inClass, String enumListForClass, final URLClassLoader urlClassLoader) {
 
         // Search for enum in public methods
         int publicMethodOffset = line.indexOf("public ");
@@ -221,6 +222,11 @@ public class JavaSourceParser {
                     int endJavaSuffixIndex = sourceFile.indexOf(".java", startSourcesFolderIndex);
 
                     enumTypeWithPath = sourceFile.substring(startSourcesFolderIndex, endJavaSuffixIndex).replace('/', '.') + '$' + enumType;
+
+                    if (enumListForClass.isEmpty()) {
+
+                        enumListForClass = getEnumValuesFromClass(enumTypeWithPath, urlClassLoader);
+                    }
 
                 } else {
 

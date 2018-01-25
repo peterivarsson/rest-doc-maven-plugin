@@ -139,13 +139,13 @@ public class OpenApiOutput {
                     pathContent.append("\n          description: ");
                     pathContent.append(methodInfo.getReturnInfo().getReturnStatus());
 
-                    if(methodInfo.getReturnInfo().getReturnClassName().startsWith("java.util.List")) {
+                    if (methodInfo.getReturnInfo().getReturnClassName().startsWith("java.util.List")) {
 
                         addPathContent(pathContent, methodInfo);
 
                     } else {
-                        
-                        if(!methodInfo.getReturnInfo().getReturnClassName().startsWith("java")) {
+
+                        if (!methodInfo.getReturnInfo().getReturnClassName().startsWith("java")) {
 
                             addPathContent(pathContent, methodInfo);
 
@@ -198,17 +198,17 @@ public class OpenApiOutput {
         pathContent.append("\n          content: ");
         pathContent.append("\n            ");
         if (methodInfo.getProduceType().isEmpty()) {
-            
+
             // Default to 'application/json'
             pathContent.append("application/json");
-            
+
         } else {
-            
+
             pathContent.append(methodInfo.getProduceType());
         }
         pathContent.append(":\n              schema:");
         pathContent.append("\n                ");
-        OpenApiField openApiField = mapFieldType(methodInfo.getReturnInfo().getReturnClassName());
+        OpenApiField openApiField = mapFieldType(methodInfo.getReturnInfo().getReturnClassName(), null);
         pathContent.append(openApiField.getFieldType());
     }
 
@@ -227,13 +227,13 @@ public class OpenApiOutput {
         }
         pathContent.append("\n          schema:");
         pathContent.append("\n            type: ");
-        type = mapFieldType(parameter.getParameterClassName());
+        type = mapFieldType(parameter.getParameterClassName(), null);
         pathContent.append(type.getFieldType());
         if (type.equals("array")) {
 
             pathContent.append("\n            items:");
             pathContent.append("\n              type: ");
-            type = mapFieldType(getListType(parameter.getParameterClassName()));
+            type = mapFieldType(getListType(parameter.getParameterClassName()), null);
             pathContent.append(type.getFieldType());
             if (type.getFieldFormat() != null) {
 
@@ -314,32 +314,67 @@ public class OpenApiOutput {
                         component.append("\n        ");
                         component.append(field.getFieldName());
                         component.append(":");
-                        component.append("\n          ");
-                        OpenApiField openApiField = mapFieldType(field.getFieldType());
+                        
+                        if(field.getFieldName().equals("error")) {
+                            
+                            component.append("\n          type: object");
+                            component.append("\n          description: ");
+                            component.append(dataModelInfo.getInfo().replaceAll(":", ""));
 
-                        if (!openApiField.getFieldType().startsWith("$ref:")) {
+                        } else if(field.getFieldType().equals("enum")) {
+                            
+                            component.append("\n          type: string");
+                            component.append("\n          enum: [");
+                            component.append(field.getFieldOfType());
+                            component.append("]");
 
-                            component.append("type: ");
-                        }
+                        } else {
 
-                        component.append(openApiField.getFieldType());
+                            component.append("\n          ");
+                        
+                            OpenApiField openApiField = mapFieldType(field.getFieldType(), field.getFieldOfType());
 
-                        if (openApiField.getFieldFormat() != null) {
+                            if (!openApiField.getFieldType().startsWith("$ref:")) {
 
-                            component.append("\n          format: ");
-                            component.append(openApiField.getFieldFormat());
-                        }
+                                component.append("type: ");
+                            }
 
-                        if (openApiField.getFieldType().equals("array")) {
+                            component.append(openApiField.getFieldType());
 
-                            component.append("\n          items:");
+                            if (openApiField.getFieldFormat() != null) {
 
-                            OpenApiField openApiItemnField = mapFieldType(field.getListOfType());
+                                component.append("\n          format: ");
+                                component.append(openApiField.getFieldFormat());
+                            }
 
-                            if (openApiItemnField.getFieldType().startsWith("$ref")) {
+                            if (openApiField.getDescription() != null) {
 
-                                component.append("\n              ");
-                                component.append(openApiItemnField.getFieldType());
+                                component.append("\n          description: ");
+                                component.append(openApiField.getDescription());
+                            }
+
+                            if (openApiField.getFieldType().equals("array")) {
+
+                                component.append("\n          items:");
+
+                                OpenApiField openApiItemField = mapFieldType(field.getFieldOfType(), null);
+
+                                if(!openApiItemField.getFieldType().startsWith("$ref:")) {
+
+                                    component.append("\n            type: ");
+                                    component.append(openApiItemField.getFieldType());
+
+                                    if (openApiItemField.getFieldFormat() != null) {
+
+                                        component.append("\n            format: ");
+                                        component.append(openApiItemField.getFieldFormat());
+                                    }
+                                } else {
+
+                                    // $ref: reference
+                                    component.append("\n            ");
+                                    component.append(openApiItemField.getFieldType());
+                                }
                             }
                         }
                     });
@@ -360,7 +395,7 @@ public class OpenApiOutput {
         });
     }
 
-    private OpenApiField mapFieldType(final String javaField) {
+    private OpenApiField mapFieldType(final String javaField, final String extendedFieldType) {
 
         OpenApiField field = new OpenApiField();
 
@@ -414,16 +449,22 @@ public class OpenApiOutput {
                 field.setFieldType("array");
                 return field;
 
-            default:
-                if (javaField.endsWith("java.net.URI")) {
+            case "java.net.URI":
+                field.setFieldType("string");
+                field.setFieldFormat("uri");
+                field.setDescription(javaField);
+                return field;
 
-                    field.setFieldType("string");
-                    return field;
-                }
-               
+            default:
                 if (javaField.startsWith("java.util.List")) {
 
                     field.setFieldType("array");
+                    return field;
+
+                } else if (javaField.endsWith("Map")) {
+
+                    field.setFieldType("object");
+                    field.setDescription(javaField);
                     return field;
 
                 } else {
@@ -441,6 +482,14 @@ public class OpenApiOutput {
 
                             componentName = javaField.substring(lastDot + 1);
 
+                            if(componentName.equals("Set")) {
+                                
+                                int extendedLastDot = extendedFieldType.lastIndexOf('.');
+                                
+                                componentName = componentName + "-" + extendedFieldType.substring(extendedLastDot + 1);
+                            
+                                addComponent(componentName, extendedFieldType);
+                            }
                         } else {
 
                             componentName = javaField.substring(lastDot + 1, greaterThanIndex);
@@ -462,6 +511,12 @@ public class OpenApiOutput {
                         }
 
                         field.setFieldType(componentRef.toString());
+
+                        if (javaField.endsWith("Set")) {
+
+                            field.setDescription(javaField);
+                        }
+
                         return field;
 
                     } else {

@@ -450,22 +450,22 @@ public class HtmlOutput {
             htmlBuffer.append(field.getFieldType());
             htmlBuffer.append("</td><td>");
 
-            if (!field.getListOfType().isEmpty()) {
+            if (!field.getFieldOfType().isEmpty()) {
 
-                if ((field.getListOfType().contains(".") == true)
-                        && (field.getListOfType().startsWith("java.") == false)) {
+                if ((field.getFieldOfType().contains(".") == true)
+                        && (field.getFieldOfType().startsWith("java.") == false)) {
 
                     // Domain data
                     htmlBuffer.append("\r\t\t<a href=./");
-                    htmlBuffer.append(field.getListOfType());
+                    htmlBuffer.append(field.getFieldOfType());
                     htmlBuffer.append(".html>");
-                    htmlBuffer.append(field.getListOfType());
+                    htmlBuffer.append(field.getFieldOfType());
                     htmlBuffer.append("</a>");
 
                 } else {
 
                     // This is a Primitive Data Type
-                    htmlBuffer.append(field.getListOfType());
+                    htmlBuffer.append(field.getFieldOfType());
                 }
             } else {
 

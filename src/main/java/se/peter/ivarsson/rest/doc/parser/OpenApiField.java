@@ -13,6 +13,7 @@ public class OpenApiField {
    
     String fieldType;
     String fieldFormat;
+    String description;
 
     public String getFieldType() {
         return fieldType;
@@ -30,8 +31,16 @@ public class OpenApiField {
         this.fieldFormat = fieldFormat;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
     @Override
     public String toString() {
-        return "OpenApiField{" + "fieldType=" + fieldType + ", fieldFormat=" + fieldFormat + '}';
+        return "OpenApiField{" + "fieldType=" + fieldType + ", fieldFormat=" + fieldFormat + ", description=" + description + '}';
     }
 }
