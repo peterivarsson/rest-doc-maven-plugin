@@ -231,7 +231,7 @@ public class OpenApiOutput {
         pathContent.append("\n            type: ");
         type = mapFieldType(parameter.getParameterClassName(), null);
         pathContent.append(type.getFieldType());
-        if (type.equals("array")) {
+        if (type.getFieldType().equals("array")) {
 
             pathContent.append("\n            items:");
             pathContent.append("\n              type: ");
