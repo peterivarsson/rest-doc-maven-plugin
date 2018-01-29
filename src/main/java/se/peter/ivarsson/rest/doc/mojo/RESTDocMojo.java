@@ -190,7 +190,7 @@ public class RESTDocMojo extends AbstractMojo {
             throw new MojoExecutionException(error);
         }
 
-        new RestDocHandler(classesDirectory, sourcesDirectory, loggingDirectory);
+        RestDocHandler restDocHandler = new RestDocHandler(classesDirectory, sourcesDirectory, loggingDirectory);
 
         if (outputType.equals("html")) {
 
@@ -198,7 +198,7 @@ public class RESTDocMojo extends AbstractMojo {
 
             HtmlOutput htmlOutput = new HtmlOutput();
 
-            htmlOutput.createHTMLDocumantation(outputDirectory, projectTitle);
+            htmlOutput.createHTMLDocumantation(outputDirectory, loggingDirectory, projectTitle);
 
         } else {
 
@@ -226,8 +226,9 @@ public class RESTDocMojo extends AbstractMojo {
 
             OpenApiOutput openApiOutput = new OpenApiOutput();
 
-            openApiOutput.createOpenApiDocumantation(outputDirectory, projectTitle, openApiDocVersion, openApiLicenceName,
-                    openApiDevelopmentServerUrl, openApiStagingServerUrl, openApiProductionServerUrl);
+            openApiOutput.createOpenApiDocumantation(outputDirectory, loggingDirectory, projectTitle, 
+                    openApiDocVersion, openApiLicenceName, openApiDevelopmentServerUrl, 
+                    openApiStagingServerUrl, openApiProductionServerUrl);
         }
 
         getLog().info("\nRESTDocMojo maven plugin FINISHED executing\n");

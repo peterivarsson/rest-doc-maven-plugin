@@ -20,10 +20,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.logging.FileHandler;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 import se.peter.ivarsson.rest.doc.sourceParser.JavaSourceParser;
+import se.peter.ivarsson.rest.doc.utils.LoggingUtils;
 
 /**
  *
@@ -46,19 +45,11 @@ public class RestDocHandler {
     public static RestInfo restInfo = new RestInfo();
 
     /**
-     * Used by the write documentation classes
-     */
-    public static Logger getLogger() {
-
-        return LOGGER;
-    }
-
-    /**
      *
      */
     public RestDocHandler(final File classesDirectory, final File sourceDirectory, final File loggingDirectory) {
 
-        addLoggingFileHandler(loggingDirectory);
+        LoggingUtils.addLoggingFileHandler(loggingDirectory, LOGGER);
 
         LOGGER.info("REST documentation STARTED analyzing");
 
@@ -988,26 +979,6 @@ public class RestDocHandler {
                             methodInfo.setParameterInfo(newParameterInfo);
                         });
             }
-        }
-    }
-
-    private void addLoggingFileHandler(final File loggingDirectory) {
-
-        try {
-
-            String logFilePath = loggingDirectory.getAbsolutePath() + "/RestDoc.log";
-
-            int maxSizeOfTheLogFile = 1_000_000;
-            int maxNumberOfLogFiles = 10;
-
-            FileHandler fileHandler = new FileHandler(logFilePath, maxSizeOfTheLogFile, maxNumberOfLogFiles);
-            SimpleFormatter simpleFormatter = new SimpleFormatter();
-            fileHandler.setFormatter(simpleFormatter);
-            LOGGER.addHandler(fileHandler);
-
-        } catch (IOException ioe) {
-
-            System.out.println(ioe.getMessage());
         }
     }
 }

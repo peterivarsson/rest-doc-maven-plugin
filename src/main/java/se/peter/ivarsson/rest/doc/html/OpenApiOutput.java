@@ -13,12 +13,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
+import java.util.logging.Logger;
 import se.peter.ivarsson.rest.doc.parser.ClassInfo;
 import se.peter.ivarsson.rest.doc.parser.DataModelInfo;
 import se.peter.ivarsson.rest.doc.parser.MethodInfo;
 import se.peter.ivarsson.rest.doc.parser.OpenApiField;
 import se.peter.ivarsson.rest.doc.parser.ParameterInfo;
 import se.peter.ivarsson.rest.doc.parser.RestDocHandler;
+import se.peter.ivarsson.rest.doc.utils.LoggingUtils;
 
 /**
  *
@@ -26,15 +28,20 @@ import se.peter.ivarsson.rest.doc.parser.RestDocHandler;
  */
 public class OpenApiOutput {
 
+    private static final Logger LOGGER = Logger.getLogger(OpenApiOutput.class.getSimpleName());
+        
     final String NO_COLLECTION = "";
 
     private final HashMap<String, String> components = new HashMap<>();
     private final HashMap<String, String> methodPaths = new HashMap<>();
 
-    public void createOpenApiDocumantation(final File outputDirectory, final String projectTitle, final String openApiDocVersion,
+    public void createOpenApiDocumantation(final File outputDirectory, final File loggingDirectory, 
+            final String projectTitle, final String openApiDocVersion,
             final String openApiLicenceName, final String openApiDevelopmentServerUrl,
             final String openApiStagingServerUrl, final String openApiProductionServerUrl) {
 
+        LoggingUtils.addLoggingFileHandler(loggingDirectory, LOGGER);
+        
         StringBuilder openApiBuffer = new StringBuilder("openapi: \"3.0.1\"\n");
 
         writeOpenApiInfo(openApiBuffer, projectTitle, openApiDocVersion, openApiLicenceName,
@@ -108,9 +115,9 @@ public class OpenApiOutput {
         classinfo.getMethodInfo().stream()
                 .forEach(methodInfo -> {
 
-                    RestDocHandler.getLogger().fine(() -> "ClassRootPath: " + classinfo.getClassRootPath());
-                    RestDocHandler.getLogger().fine(() -> "ClassPath: " + classinfo.getClassPath());
-                    RestDocHandler.getLogger().fine(() -> "methodInfo.getMethodPath: " + methodInfo.getMethodPath());
+                    LOGGER.info(() -> "ClassRootPath: " + classinfo.getClassRootPath());
+                    LOGGER.info(() -> "ClassPath: " + classinfo.getClassPath());
+                    LOGGER.info(() -> "methodInfo.getMethodPath: " + methodInfo.getMethodPath());
 
                     StringBuilder methodPath = new StringBuilder("  ");
 
@@ -686,7 +693,7 @@ public class OpenApiOutput {
 
         } catch (IOException ioe) {
 
-            RestDocHandler.getLogger().severe("writeOpenApiToFile() Path ='" + openApiPath.toString() + "' IOException: " + ioe.getMessage());
+            LOGGER.severe("writeOpenApiToFile() Path ='" + openApiPath.toString() + "' IOException: " + ioe.getMessage());
         }
     }
 
