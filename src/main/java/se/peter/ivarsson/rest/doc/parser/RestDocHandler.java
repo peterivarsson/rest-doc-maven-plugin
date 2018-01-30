@@ -199,7 +199,7 @@ public class RestDocHandler {
 
         if (className.contains("$")) {
 
-            // Probarbly an enum value
+            // Probarbly an enum value or anonymous inner class
             return null;
         }
 
@@ -215,7 +215,20 @@ public class RestDocHandler {
 
         String pathValue = annotation.value();
 
-        classInfo.setClassPath(pathValue);
+        if (!pathValue.isEmpty()) {
+
+            if (pathValue.charAt(0) != '/') {
+
+                classInfo.setClassPath("/" + pathValue);
+
+            } else {
+
+                classInfo.setClassPath(pathValue);
+            }
+        } else {
+
+            classInfo.setClassPath(pathValue);
+        }
 
         restInfo.getClassInfo().add(classInfo);
     }
@@ -228,19 +241,10 @@ public class RestDocHandler {
 
             for (Method method : methods) {
 
-                Annotation[] methodAnnotations = method.getAnnotations();
+                if (checkIfMethodsHasHttpRequestType(method)) {
 
-                for (Annotation annotation : methodAnnotations) {
-
-                    if (annotation instanceof javax.ws.rs.Path) {
-
-                        // We found a method with Path annotation
-                        if (checkIfMethodsHasHttpRequestType(methodAnnotations)) {
-
-                            // We found a method with a 'Http request type'
-                            addMethodInfoToRestInfoList(classInfo, (javax.ws.rs.Path) annotation, method, javaDocComments);
-                        }
-                    }
+                    // We found a method with a 'Http request type'
+                    addMethodInfoToRestInfoList(classInfo, method, javaDocComments);
                 }
             }
         } catch (Exception cnfe) {
@@ -250,9 +254,11 @@ public class RestDocHandler {
     }
 
     // Only add methods that has 'Http request types'
-    private boolean checkIfMethodsHasHttpRequestType(final Annotation[] methodAnnotations) {
+    private boolean checkIfMethodsHasHttpRequestType(final Method method) {
 
         LOGGER.info("checkIfMethodsHasHttpRequestType()");
+
+        Annotation[] methodAnnotations = method.getAnnotations();
 
         for (Annotation annotation : methodAnnotations) {
 
@@ -277,7 +283,7 @@ public class RestDocHandler {
         return false;
     }
 
-    private void addMethodInfoToRestInfoList(final ClassInfo classInfo, final javax.ws.rs.Path annotation, final Method method, final HashMap<String, String> javaDocComments) {
+    private void addMethodInfoToRestInfoList(final ClassInfo classInfo, final Method method, final HashMap<String, String> javaDocComments) {
 
         if (classInfo.getClassPath() == null) {
 
@@ -294,28 +300,11 @@ public class RestDocHandler {
             classInfo.setMethodInfo(new ArrayList<>());
         }
 
-        StringBuilder restPath = new StringBuilder();
-
-        if (!annotation.value().isEmpty() && (annotation.value().charAt(0) != '/')) {
-
-            restPath.append('/');
-        }
-
-        if (annotation.value().endsWith("/")) {
-
-            restPath.append(annotation.value().substring(0, annotation.value().length() - 1));
-
-        } else {
-
-            restPath.append(annotation.value());
-        }
-
         ReturnInfo returnInfo = new ReturnInfo();
         MethodInfo methodInfo = new MethodInfo();
         methodInfo.setReturnInfo(returnInfo);
 
         methodInfo.setMethodName(method.getName());
-        methodInfo.setMethodPath(restPath.toString());
 
         addMethodsPathMethod(methodInfo, returnInfo, method);
         addMethodReturnType(returnInfo, method, classInfo.getPackageAndClassName());
@@ -338,7 +327,9 @@ public class RestDocHandler {
         StringBuilder consumeTypes = new StringBuilder();
         boolean firstConsumeType = true;
 
-        LOGGER.info("Method: " + method.toGenericString());
+        LOGGER.info("addMethodsPathMethod() Method: " + method.toGenericString());
+
+        methodInfo.setMethodPath("");
 
         Annotation[] methodAnnotations = method.getAnnotations();
 
@@ -361,6 +352,28 @@ public class RestDocHandler {
             } else if (annotation instanceof javax.ws.rs.DELETE) {
 
                 methodInfo.setHttpRequestType("DELETE");
+
+            } else if (annotation instanceof javax.ws.rs.Path) {
+
+                StringBuilder restPath = new StringBuilder();
+
+                javax.ws.rs.Path pathAnnotation = (javax.ws.rs.Path) annotation;
+
+                if (!pathAnnotation.value().isEmpty() && (pathAnnotation.value().charAt(0) != '/')) {
+
+                    restPath.append('/');
+                }
+
+                if (pathAnnotation.value().endsWith("/")) {
+
+                    restPath.append(pathAnnotation.value().substring(0, pathAnnotation.value().length() - 1));
+
+                } else {
+
+                    restPath.append(pathAnnotation.value());
+                }
+
+                methodInfo.setMethodPath(restPath.toString());
 
             } else if (annotation instanceof java.lang.Deprecated) {
 
@@ -493,140 +506,168 @@ public class RestDocHandler {
 
             Class clazz = urlClassLoader.loadClass(className);
 
-            Method[] methods = clazz.getMethods();
+            Enum<?>[] enumConstantsArray = (Enum<?>[]) clazz.getEnumConstants();
 
-            boolean enumFieldAdded = false;
+            if (enumConstantsArray == null) {
 
-            for (Method method : methods) {
+                Method[] methods = clazz.getMethods();
 
-                String fieldType = method.getReturnType().getName();
+                boolean enumFieldAdded = false;
 
-                if (fieldType.startsWith("[L")) {
+                for (Method method : methods) {
 
-                    continue;
-                }
+                    String fieldType = method.getReturnType().getName();
 
-                FieldInfo fieldInfo = new FieldInfo();
+                    if (fieldType.startsWith("[L")) {
 
-                if (isGetter(method)) {
+                        continue;
+                    }
 
-                    if (!fieldType.equals("java.lang.Class")) {
+                    FieldInfo fieldInfo = new FieldInfo();
 
-                        int startIndex = 0;
+                    if (isGetter(method)) {
 
-                        if (method.getName().startsWith("get")) {
+                        if (!fieldType.equals("java.lang.Class")) {
 
-                            startIndex = 3;
+                            int startIndex = 0;
 
-                        } else {
+                            if (method.getName().startsWith("get")) {
 
-                            startIndex = 2;
-                        }
+                                startIndex = 3;
 
-                        char fieldName[] = method.getName().substring(startIndex).toCharArray();
-                        fieldName[0] = Character.toLowerCase(fieldName[0]);
+                            } else {
 
-                        fieldInfo.setFieldName(new String(fieldName));
-                        fieldInfo.setFieldType(fieldType);
-
-                        for (Annotation annotation : method.getAnnotations()) {
-
-                            String name = annotation.toString();
-
-                            if (annotation instanceof se.peter.ivarsson.rest.doc.rest.type.DocListType) {
-
-                                se.peter.ivarsson.rest.doc.rest.type.DocListType methodParam = (se.peter.ivarsson.rest.doc.rest.type.DocListType) annotation;
-
-                                String annotationKey = methodParam.key();
-
-                                fieldInfo.setFieldOfType(annotationKey);
-
-                                // Add this annotation data to domain data list
-                                addDomainDataSet.add(annotationKey);
+                                startIndex = 2;
                             }
-                        }
 
-                        if (fieldInfo.getFieldOfType().isEmpty()) {
+                            char fieldName[] = method.getName().substring(startIndex).toCharArray();
+                            fieldName[0] = Character.toLowerCase(fieldName[0]);
 
-                            if (fieldType.equals("java.util.List")
-                                    || fieldType.endsWith("Set")) {
+                            fieldInfo.setFieldName(new String(fieldName));
+                            fieldInfo.setFieldType(fieldType);
 
-                                // "java.util.List<java.lang.String>"
-                                // "java.util.???Set<java.lang.String>"
-                                String genericReturnTypeName = method.getGenericReturnType().getTypeName();
-                                int startListType = genericReturnTypeName.indexOf('<');
-                                int endListType = genericReturnTypeName.indexOf('>');
-                                String type = genericReturnTypeName.substring(startListType + 1, endListType);
-                                fieldInfo.setFieldOfType(type);
+                            for (Annotation annotation : method.getAnnotations()) {
 
-                                if (isDomainData(type)) {
+                                String name = annotation.toString();
 
-                                    addDomainDataSet.add(type);
+                                if (annotation instanceof se.peter.ivarsson.rest.doc.rest.type.DocListType) {
+
+                                    se.peter.ivarsson.rest.doc.rest.type.DocListType methodParam = (se.peter.ivarsson.rest.doc.rest.type.DocListType) annotation;
+
+                                    String annotationKey = methodParam.key();
+
+                                    fieldInfo.setFieldOfType(annotationKey);
+
+                                    // Add this annotation data to domain data list
+                                    addDomainDataSet.add(annotationKey);
+                                }
+                            }
+
+                            if (fieldInfo.getFieldOfType().isEmpty()) {
+
+                                if (fieldType.equals("java.util.List")
+                                        || fieldType.endsWith("Set")) {
+
+                                    // "java.util.List<java.lang.String>"
+                                    // "java.util.???Set<java.lang.String>"
+                                    String genericReturnTypeName = method.getGenericReturnType().getTypeName();
+                                    int startListType = genericReturnTypeName.indexOf('<');
+                                    int endListType = genericReturnTypeName.indexOf('>');
+                                    String type = genericReturnTypeName.substring(startListType + 1, endListType);
+                                    fieldInfo.setFieldOfType(type);
+
+                                    if (isDomainData(type)) {
+
+                                        addDomainDataSet.add(type);
+                                    }
+                                } else {
+
+                                    if (isDomainData(fieldType)) {
+
+                                        addDomainDataSet.add(fieldType);
+
+                                        if (enumTypes.containsKey(fieldType)) {
+
+                                            // Found enum in set
+                                            int lastDotIndex = fieldType.lastIndexOf('.');
+
+                                            if (lastDotIndex != -1) {
+
+                                                fieldInfo.setFieldName(fieldType.substring(lastDotIndex + 1));
+                                                fieldInfo.setFieldType("enum");
+                                                fieldInfo.setFieldOfType(enumTypes.get(fieldType));
+                                            }
+                                        }
+                                    }
                                 }
                             } else {
 
-                                if (isDomainData(fieldType)) {
+                                // ListOfType not empty
+                                if (isDomainData(fieldInfo.getFieldOfType())) {
 
-                                    addDomainDataSet.add(fieldType);
-
-                                    if (enumTypes.containsKey(fieldType)) {
+                                    if (enumTypes.containsKey(fieldInfo.getFieldOfType())) {
 
                                         // Found enum in set
-                                        int lastDotIndex = fieldType.lastIndexOf('.');
+                                        int lastDotIndex = fieldInfo.getFieldOfType().lastIndexOf('.');
 
                                         if (lastDotIndex != -1) {
 
-                                            fieldInfo.setFieldName(fieldType.substring(lastDotIndex + 1));
+                                            fieldInfo.setFieldName(fieldInfo.getFieldOfType().substring(lastDotIndex + 1));
                                             fieldInfo.setFieldType("enum");
-                                            fieldInfo.setFieldOfType(enumTypes.get(fieldType));
+                                            fieldInfo.setFieldOfType(enumTypes.get(fieldInfo.getFieldOfType()));
                                         }
                                     }
                                 }
                             }
-                        } else {
 
-                            // ListOfType not empty
-                            if (isDomainData(fieldInfo.getFieldOfType())) {
+                            dataModelInfo.getFields().add(fieldInfo);
+                        }
+                    } else {
 
-                                if (enumTypes.containsKey(fieldInfo.getFieldOfType())) {
+                        // NO getter methods exists, check if enum is needed to be added
+                        if (isDomainData(className) && !enumFieldAdded) {
 
-                                    // Found enum in set
-                                    int lastDotIndex = fieldInfo.getFieldOfType().lastIndexOf('.');
+                            if (enumTypes.containsKey(className)) {
 
-                                    if (lastDotIndex != -1) {
+                                // Found enum in set
+                                int lastDotIndex = className.lastIndexOf('.');
 
-                                        fieldInfo.setFieldName(fieldInfo.getFieldOfType().substring(lastDotIndex + 1));
-                                        fieldInfo.setFieldType("enum");
-                                        fieldInfo.setFieldOfType(enumTypes.get(fieldInfo.getFieldOfType()));
-                                    }
+                                if (lastDotIndex != -1) {
+
+                                    fieldInfo.setFieldName(className.substring(lastDotIndex + 1));
+                                    fieldInfo.setFieldType("enum");
+                                    fieldInfo.setFieldOfType(enumTypes.get(className));
+
+                                    dataModelInfo.getFields().add(fieldInfo);
+
+                                    enumFieldAdded = true;
                                 }
                             }
                         }
-
-                        dataModelInfo.getFields().add(fieldInfo);
                     }
-                } else {
+                }
+            } else {
 
-                    // NO getter methods exists, check if enum is needed to be added
-                    if (isDomainData(className) && !enumFieldAdded) {
+                // Enumerrastion constants exists
+                int lastDotIndex = className.lastIndexOf('.');
 
-                        if (enumTypes.containsKey(className)) {
+                if (lastDotIndex != -1) {
 
-                            // Found enum in set
-                            int lastDotIndex = className.lastIndexOf('.');
+                    StringBuilder enumList = new StringBuilder();
+                    
+                    for (Enum myEnum : enumConstantsArray) {
 
-                            if (lastDotIndex != -1) {
-
-                                fieldInfo.setFieldName(className.substring(lastDotIndex + 1));
-                                fieldInfo.setFieldType("enum");
-                                fieldInfo.setFieldOfType(enumTypes.get(className));
-
-                                dataModelInfo.getFields().add(fieldInfo);
-
-                                enumFieldAdded = true;
-                            }
-                        }
+                        enumList.append(myEnum);
+                        enumList.append(", ");
                     }
+
+                    FieldInfo fieldInfo = new FieldInfo();
+
+                    fieldInfo.setFieldName(className.substring(lastDotIndex + 1));
+                    fieldInfo.setFieldType("enum");
+                    fieldInfo.setFieldOfType(enumList.substring(0, enumList.length() - 2));
+
+                    dataModelInfo.getFields().add(fieldInfo);
                 }
             }
 

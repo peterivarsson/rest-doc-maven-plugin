@@ -28,16 +28,10 @@ public class LoggingUtils {
 
                 String logFilePath = loggingDirectory.getAbsolutePath() + "/RestDoc.log";
 
-                int maxSizeOfTheLogFile = 1_000_000;
-                int maxNumberOfLogFiles = 10;
-
-                fileHandler = new FileHandler(logFilePath, maxSizeOfTheLogFile, maxNumberOfLogFiles, false);
+                fileHandler = new FileHandler(logFilePath, false);
                 simpleFormatter = new SimpleFormatter();
                 fileHandler.setFormatter(simpleFormatter);
             }
-
-            System.out.println("FileHandler: " + fileHandler);
-            System.out.println("Logger: " + logger);
 
             logger.addHandler(fileHandler);
 

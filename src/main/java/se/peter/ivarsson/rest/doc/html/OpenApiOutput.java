@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.logging.Logger;
 import se.peter.ivarsson.rest.doc.parser.ClassInfo;
 import se.peter.ivarsson.rest.doc.parser.DataModelInfo;
@@ -29,19 +30,20 @@ import se.peter.ivarsson.rest.doc.utils.LoggingUtils;
 public class OpenApiOutput {
 
     private static final Logger LOGGER = Logger.getLogger(OpenApiOutput.class.getSimpleName());
-        
+
     final String NO_COLLECTION = "";
 
+    private final HashSet<String> startAddedcomponents = new HashSet<>();
     private final HashMap<String, String> components = new HashMap<>();
     private final HashMap<String, String> methodPaths = new HashMap<>();
 
-    public void createOpenApiDocumantation(final File outputDirectory, final File loggingDirectory, 
+    public void createOpenApiDocumantation(final File outputDirectory, final File loggingDirectory,
             final String projectTitle, final String openApiDocVersion,
             final String openApiLicenceName, final String openApiDevelopmentServerUrl,
             final String openApiStagingServerUrl, final String openApiProductionServerUrl) {
 
         LoggingUtils.addLoggingFileHandler(loggingDirectory, LOGGER);
-        
+
         StringBuilder openApiBuffer = new StringBuilder("openapi: \"3.0.1\"\n");
 
         writeOpenApiInfo(openApiBuffer, projectTitle, openApiDocVersion, openApiLicenceName,
@@ -124,7 +126,15 @@ public class OpenApiOutput {
                     methodPath.append(classinfo.getClassRootPath());
                     methodPath.append(classinfo.getClassPath());
                     methodPath.append(methodInfo.getMethodPath());
-                    methodPath.append(":\n");
+
+                    if (methodPath.toString().equals("  ")) {
+
+                        methodPath.append("/:\n");
+
+                    } else {
+
+                        methodPath.append(":\n");
+                    }
 
                     final StringBuilder pathContent = new StringBuilder();
 
@@ -137,8 +147,12 @@ public class OpenApiOutput {
 
                     pathContent.append("    ");
                     pathContent.append(methodInfo.getHttpRequestType().toLowerCase());
-                    pathContent.append(":\n      description: ");
-                    pathContent.append(onlyJavaDocComments(methodInfo.getJavaDoc()));
+                    pathContent.append(":");
+                    if (methodInfo.getJavaDoc() != null) {
+
+                        pathContent.append("\n      description: ");
+                        pathContent.append(onlyJavaDocComments(methodInfo.getJavaDoc()));
+                    }
                     pathContent.append("\n      operationId: ");
                     pathContent.append(methodInfo.getMethodName());
                     pathContent.append("\n      responses: ");
@@ -161,28 +175,43 @@ public class OpenApiOutput {
                         }
                     }
 
-                    pathContent.append("\n      parameters:");
+                    final Boolean[] validParameters = new Boolean[1];
+                    validParameters[0] = false;
+
                     methodInfo.getParameterInfo().stream()
                             .forEach(parameter -> {
-
-                                String type = null;
 
                                 switch (parameter.getParameterType()) {
 
                                     case "javax.ws.rs.PathParam":
+                                        if (validParameters[0] == false) {
+
+                                            pathContent.append("\n      parameters:");
+                                            validParameters[0] = true;
+                                        }
                                         addParameterYaml(pathContent, "path", parameter);
                                         break;
 
                                     case "javax.ws.rs.HeaderParam":
+                                        if (validParameters[0] == false) {
+
+                                            pathContent.append("\n      parameters:");
+                                            validParameters[0] = true;
+                                        }
                                         addParameterYaml(pathContent, "header", parameter);
                                         break;
 
                                     case "javax.ws.rs.QueryParam":
+                                        if (validParameters[0] == false) {
+
+                                            pathContent.append("\n      parameters:");
+                                            validParameters[0] = true;
+                                        }
                                         addParameterYaml(pathContent, "query", parameter);
                                         break;
                                 }
 
-                                String description = parameterCommentsFromJavaDoc(methodInfo.getJavaDoc().toLowerCase(), parameter.getParameterAnnotationName());
+                                String description = parameterCommentsFromJavaDoc(methodInfo.getJavaDoc(), parameter.getParameterAnnotationName());
 
                                 if (!description.isEmpty()) {
 
@@ -235,8 +264,12 @@ public class OpenApiOutput {
 
         }
         pathContent.append("\n          schema:");
-        pathContent.append("\n            type: ");
         type = mapFieldType(parameter.getParameterClassName(), null);
+        pathContent.append("\n            ");
+        if (!type.getFieldType().startsWith("$ref:")) {
+
+            pathContent.append("type: ");
+        }
         pathContent.append(type.getFieldType());
         if (type.getFieldType().equals("array")) {
 
@@ -306,10 +339,14 @@ public class OpenApiOutput {
             return;
         }
 
-        if (components.containsKey(componentName)) {
+        if (startAddedcomponents.contains(componentName)) {
 
             // This component already exist
             return;
+
+        } else {
+
+            startAddedcomponents.add(componentName);
         }
 
         StringBuilder component = new StringBuilder();
@@ -317,9 +354,21 @@ public class OpenApiOutput {
         component.append("    ");
         component.append(componentName);
         component.append(":");
-        component.append("\n      properties:");
 
         DataModelInfo dataModelInfo = RestDocHandler.restInfo.getDomainDataMap().get(className);
+
+        if (dataModelInfo.getFields().size() > 0) {
+
+            component.append("\n      properties:");
+
+        } else {
+
+            if (!dataModelInfo.getInfo().isEmpty()) {
+
+                component.append("\n        description: ");
+                component.append(dataModelInfo.getInfo());
+            }
+        }
 
         if (dataModelInfo != null) {
 
@@ -656,27 +705,34 @@ public class OpenApiOutput {
 
     private String parameterCommentsFromJavaDoc(final String javaDoc, String parameterName) {
 
-        int startFirstAtIndex = javaDoc.indexOf("@param");
+        if (javaDoc == null) {
+
+            return "";
+        }
+
+        String javaDocLowerCase = javaDoc.toLowerCase();
+
+        int startFirstAtIndex = javaDocLowerCase.indexOf("@param");
 
         while (startFirstAtIndex != -1) {
 
-            int parameterNameIndex = javaDoc.indexOf(parameterName.toLowerCase(), startFirstAtIndex + 6);
+            int parameterNameIndex = javaDocLowerCase.indexOf(parameterName.toLowerCase(), startFirstAtIndex + 6);
 
             if (parameterNameIndex != -1) {
 
-                int endDescriptionIndex = javaDoc.indexOf("*", parameterNameIndex);
+                int endDescriptionIndex = javaDocLowerCase.indexOf("*", parameterNameIndex);
 
                 if (endDescriptionIndex != -1) {
 
                     int startDescription = parameterNameIndex + parameterName.length() + 1;
 
-                    return javaDoc.substring(startDescription, endDescriptionIndex).replaceAll("\\*", "").trim();
+                    return javaDocLowerCase.substring(startDescription, endDescriptionIndex).replaceAll("\\*", "").trim();
                 }
             }
 
             if (parameterNameIndex == -1) {
 
-                startFirstAtIndex = javaDoc.indexOf("@param", startFirstAtIndex + 7);
+                startFirstAtIndex = javaDocLowerCase.indexOf("@param", startFirstAtIndex + 7);
             }
         }
 
