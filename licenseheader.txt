@@ -3,7 +3,7 @@ ${licenseFirst}
 </#if>
 ${licensePrefix}Rest Documentation maven plugin.
 ${licensePrefix}
-${licensePrefix}Copyright (C) 2017 Peter Ivarsson
+${licensePrefix}Copyright (C) 2018 Peter Ivarsson
 <#if licenseLast??>
 ${licenseLast}
 </#if>

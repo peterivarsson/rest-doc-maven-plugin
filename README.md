@@ -15,9 +15,9 @@ Put below configurations in your pom.xml, and modify the paths for your needs.
 
 ```
 <plugin>
-    <groupId>rest.doc.plugin</groupId>
+    <groupId>se.peter.ivarsson.rest.doc</groupId>
     <artifactId>rest-doc-maven-plugin</artifactId>
-    <version>${project.version}</version>
+    <version>1.0</version>
     <configuration>
         <!-- Specify the RESTDoc parameters -->
         <classesDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-test-mobilebackend-api/target/classes</classesDirectory>
