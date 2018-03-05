@@ -8,6 +8,7 @@ package se.peter.ivarsson.rest.doc.parser;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -16,7 +17,7 @@ import java.util.List;
 public class RestInfo {
 
     private List<ClassInfo> classInfo = new ArrayList<>();
-    private HashMap<String, DataModelInfo> domainDataMap = new HashMap<>();
+    private Map<String, DataModelInfo> domainDataMap = new HashMap<>();
 
     public List<ClassInfo> getClassInfo() {
         return classInfo;
@@ -26,11 +27,11 @@ public class RestInfo {
         this.classInfo = classInfo;
     }
 
-    public HashMap<String, DataModelInfo> getDomainDataMap() {
+    public Map<String, DataModelInfo> getDomainDataMap() {
         return domainDataMap;
     }
 
-    public void setDomainDataMap(HashMap<String, DataModelInfo> domainDataMap) {
+    public void setDomainDataMap(Map<String, DataModelInfo> domainDataMap) {
         this.domainDataMap = domainDataMap;
     }
 

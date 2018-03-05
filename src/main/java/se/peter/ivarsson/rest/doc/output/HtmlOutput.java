@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2017 Peter Ivarsson
  */
-package se.peter.ivarsson.rest.doc.html;
+package se.peter.ivarsson.rest.doc.output;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,11 +13,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Logger;
+import se.peter.ivarsson.rest.doc.mojo.ConfigParameters;
 import se.peter.ivarsson.rest.doc.parser.ClassInfo;
 import se.peter.ivarsson.rest.doc.parser.FieldInfo;
 import se.peter.ivarsson.rest.doc.parser.MehodInfoComparator;
@@ -33,29 +33,37 @@ import se.peter.ivarsson.rest.doc.utils.LoggingUtils;
  */
 public class HtmlOutput {
 
+    private static final String FILE_TYPE = "file://";
+    private static final String PATH_DELIMITER = "/";
+    private static final String HTML_END_TAG = ".html>";
+    private static final String HTML_END_TABLE_ONE = "\r\t\t</table><BR>";
+    private static final String HTML_END_TABLE_TWO = "\r\r\t\t<table>";
+    private static final String HTML_END_TABLE_ROW = "</td></tr>";
+    private static final String HTML_END_TABLE_ROW_NEW_TABLE_DATA = "\r\t\t\t<tr><td>";
+    private static final String HTML_NEW_TABLE_DATA = "</td><td>";
+    private static final String HTML_NEW_ROW = "\r\r\t\t<tr>";
+    private static final String HTML_NEW_ROW_HREF = "\r\t\t<a href=./";
+
     private static final Logger LOGGER = Logger.getLogger(HtmlOutput.class.getSimpleName());
-        
-    private static int methodNumber = -1;
 
-    public void createHTMLDocumantation(final File outputDirectory, final File loggingDirectory, 
-            final String projectTitle) {
+    public void createHTMLDocumantation(final ConfigParameters configParameters) {
 
-        LoggingUtils.addLoggingFileHandler(loggingDirectory, LOGGER);
-        
-        writeIndexHtmlFile(outputDirectory, projectTitle);
+        LoggingUtils.addLoggingFileHandler(configParameters.getLoggingDirectory(), LOGGER);
 
-        writeProgrammersInfoHtmlFile(outputDirectory);
+        writeIndexHtmlFile(configParameters.getOutputDirectory(), configParameters.getProjectTitle());
 
-        writeResouresDocumentationToFiles(outputDirectory);
+        writeProgrammersInfoHtmlFile(configParameters.getOutputDirectory());
 
-        writeDomainDataToFiles(outputDirectory);
+        writeResouresDocumentationToFiles(configParameters.getOutputDirectory());
+
+        writeDomainDataToFiles(configParameters.getOutputDirectory());
     }
 
     private void writeIndexHtmlFile(final File outputDirectory, final String projectTitle) {
 
         LOGGER.info("writeIndexHtmlFile() write index.html");
 
-        Path indexFilePath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + "/index.html"));
+        Path indexFilePath = Paths.get(URI.create(FILE_TYPE + outputDirectory.getAbsolutePath() + "/index.html"));
 
         final StringBuilder htmlBuffer = htmlHeader();
 
@@ -74,24 +82,17 @@ public class HtmlOutput {
 
         htmlBuffer.append("\r\r\t<ul>");
 
-        LOGGER.info("htmlRestResourcesList()  restInfo.ClassInfo size = "
+        LOGGER.info(() -> "htmlRestResourcesList()  restInfo.ClassInfo size = "
                 + RestDocHandler.restInfo.getClassInfo().size());
 
         RestDocHandler.restInfo.getClassInfo().stream()
                 .filter(classInfo -> classInfo.getMethodInfo() != null)
-                .sorted(new Comparator<ClassInfo>() {
-
-                    @Override
-                    public int compare(ClassInfo o1, ClassInfo o2) {
-
-                        return o1.getClassName().compareTo(o2.getClassName());
-                    }
-                })
-                .forEach((res) -> {
+                .sorted((o1, o2) -> o1.getClassName().compareTo(o2.getClassName()))
+                .forEach(res -> {
 
                     htmlBuffer.append("\r\t\t<li><a href=./");
                     htmlBuffer.append(res.getPackageAndClassName());
-                    htmlBuffer.append(".html>");
+                    htmlBuffer.append(HTML_END_TAG);
                     htmlBuffer.append(res.getClassName());
                     htmlBuffer.append("</a> ");
                     htmlBuffer.append(res.getClassRootPath());
@@ -106,7 +107,7 @@ public class HtmlOutput {
 
         LOGGER.info("writeProgrammersInfoHtmlFile() wrinte index.html");
 
-        Path programmersInfoFilePath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + "/programmersinfo.html"));
+        Path programmersInfoFilePath = Paths.get(URI.create(FILE_TYPE + outputDirectory.getAbsolutePath() + "/programmersinfo.html"));
 
         final StringBuilder htmlBuffer = htmlHeader();
 
@@ -115,7 +116,7 @@ public class HtmlOutput {
         htmlGoHome(htmlBuffer);
 
         // DocReturnType
-        htmlBuffer.append("\r\r\t\t<table>");
+        htmlBuffer.append(HTML_END_TABLE_TWO);
 
         htmlBuffer.append("\r\t\t\t<tr><td>Annotation</td><td>Comment</td></tr>");
         htmlBuffer.append("\r\t\t\t<tr><td>DocReturnType</td><td>If you wan't to set an other return type than the default return type. <BR>Se example below</td></tr>");
@@ -128,7 +129,7 @@ public class HtmlOutput {
                 + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PaymentValidation paymentValidation = new PaymentValidation();<BR><BR>"
                 + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return Response.ok( paymentValidation ).build();<BR>}");
 
-        htmlBuffer.append("</td></tr>");
+        htmlBuffer.append(HTML_END_TABLE_ROW);
 
         // DocListType
         htmlBuffer.append("\r\t\t\t<tr><td colspan=2><BR><BR></td></tr>");
@@ -149,8 +150,8 @@ public class HtmlOutput {
                 + "public List<String> getMovieVersions() {<BR><BR>"
                 + "&nbsp;&nbsp;&nbsp;&nbsp;return movieVersions;<BR>}<BR>:");
 
-        htmlBuffer.append("</td></tr>");
-        htmlBuffer.append("\r\t\t</table><BR>");
+        htmlBuffer.append(HTML_END_TABLE_ROW);
+        htmlBuffer.append(HTML_END_TABLE_ONE);
 
         htmlFooter(htmlBuffer);
 
@@ -159,20 +160,17 @@ public class HtmlOutput {
 
     private void writeResouresDocumentationToFiles(final File outputDirectory) {
 
-        LOGGER.info("writeResouresDocumentationToFiles() restInfo.ClassInfo size = "
+        LOGGER.info(() -> "writeResouresDocumentationToFiles() restInfo.ClassInfo size = "
                 + RestDocHandler.restInfo.getClassInfo().size());
 
-        RestDocHandler.restInfo.getClassInfo().stream().forEach(classInfo -> {
-
-            writeResouresDocumentationToFile(outputDirectory, classInfo);
-        });
+        RestDocHandler.restInfo.getClassInfo().stream().forEach(classInfo -> writeResouresDocumentationToFile(outputDirectory, classInfo));
     }
 
     private void writeResouresDocumentationToFile(final File outputDirectory, final ClassInfo classInfo) {
 
-        LOGGER.info("writeResouresDocumentationToFile( " + classInfo.getClassName() + " )");
+        LOGGER.info(() -> "writeResouresDocumentationToFile( " + classInfo.getClassName() + " )");
 
-        Path programmersInfoFilePath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + "/" + classInfo.getPackageAndClassName() + ".html"));
+        Path programmersInfoFilePath = Paths.get(URI.create(FILE_TYPE + outputDirectory.getAbsolutePath() + PATH_DELIMITER + classInfo.getPackageAndClassName() + ".html"));
 
         final StringBuilder htmlBuffer = htmlHeader();
 
@@ -191,53 +189,54 @@ public class HtmlOutput {
 
         List<MethodInfo> methodInfoList = new ArrayList<>();
 
-        LOGGER.info("htmlRestResourceDetail() resourceType = " + resourceType);
+        LOGGER.info(() -> "htmlRestResourceDetail() resourceType = " + resourceType);
 
         RestDocHandler.restInfo.getClassInfo().stream()
-                .forEach((res) -> {
+                .forEach(res -> {
 
-            if (res.getClassName().equals(resourceType)) {
+                    if (res.getClassName().equals(resourceType)) {
 
-                if (res.getMethodInfo() == null) {
+                        if (res.getMethodInfo() == null) {
 
-                    // No info in structure
-                    return;
+                            // No info in structure
+                            return;
 
-                } else {
+                        } else {
 
-                    methodInfoList.addAll(res.getMethodInfo());
-                }
-            }
-        });
-        
+                            methodInfoList.addAll(res.getMethodInfo());
+                        }
+                    }
+                });
+
         methodInfoList.sort(new MehodInfoComparator());
 
-        methodNumber = 1;
+        final Integer[] methodNumber = new Integer[1];
+        methodNumber[0] = 1;
 
         htmlBuffer.append("\r\t\t<ul>");
 
-        methodInfoList.stream().forEach((method) -> {
+        methodInfoList.stream().forEach(method -> {
 
             htmlBuffer.append("\r\t\t\t<li><a href=\"#method");
-            htmlBuffer.append(methodNumber);
+            htmlBuffer.append(methodNumber[0]);
             htmlBuffer.append("\">");
             htmlBuffer.append(method.getHttpRequestType());
             htmlBuffer.append(" ");
             htmlBuffer.append(method.getMethodPath());
             htmlBuffer.append("</a></li><BR>");
 
-            methodNumber++;
+            methodNumber[0]++;
         });
 
         htmlBuffer.append("\r\t\t</ul>");
 
-        methodNumber = 1;
+        methodNumber[0] = 1;
 
-        methodInfoList.stream().forEach((method) -> {
+        methodInfoList.stream().forEach(method -> {
 
-            htmlMethodDetail(htmlBuffer, method, methodNumber);
+            htmlMethodDetail(htmlBuffer, method, methodNumber[0]);
 
-            methodNumber++;
+            methodNumber[0]++;
         });
     }
 
@@ -262,31 +261,31 @@ public class HtmlOutput {
         }
         htmlBuffer.append("</h3></a></p>");
 
-        htmlBuffer.append("\r\r\t\t<table>");
+        htmlBuffer.append(HTML_END_TABLE_TWO);
 
         if (methodInfo.getJavaDoc() != null) {
 
             htmlBuffer.append("\r\t\t\t<tr><td colspan=\"3\">");
             htmlBuffer.append(replaceCarriageReturnWithHtmlBreak(methodInfo.getJavaDoc()));
-            htmlBuffer.append("</td></tr>");
+            htmlBuffer.append(HTML_END_TABLE_ROW);
         }
 
         htmlBuffer.append("\r\t\t\t<tr><td>Name</td><td>Class</td><td>Parameter type</td></tr>");
 
         List<ParameterInfo> parameterInfoList = methodInfo.getParameterInfo();
 
-        parameterInfoList.stream().forEach((param) -> {
+        parameterInfoList.stream().forEach(param -> {
 
-            htmlBuffer.append("\r\t\t\t<tr><td>");
+            htmlBuffer.append(HTML_END_TABLE_ROW_NEW_TABLE_DATA);
             htmlBuffer.append(param.getParameterAnnotationName());
-            htmlBuffer.append("</td><td>");
+            htmlBuffer.append(HTML_NEW_TABLE_DATA);
 
             if (isDomainData(param.getParameterClassName())) {
 
                 // Domain data
-                htmlBuffer.append("\r\t\t<a href=./");
+                htmlBuffer.append(HTML_NEW_ROW_HREF);
                 htmlBuffer.append(param.getParameterClassName());
-                htmlBuffer.append(".html>");
+                htmlBuffer.append(HTML_END_TAG);
                 htmlBuffer.append(param.getParameterClassName());
                 htmlBuffer.append("</a>");
 
@@ -294,7 +293,7 @@ public class HtmlOutput {
 
                 htmlBuffer.append(replaceLessThanAndGreaterThan(param.getParameterClassName()));
             }
-            htmlBuffer.append("</td><td>");
+            htmlBuffer.append(HTML_NEW_TABLE_DATA);
 
             switch (param.getParameterType()) {
 
@@ -314,20 +313,20 @@ public class HtmlOutput {
                     htmlBuffer.append(param.getParameterType());
                     break;
             }
-            htmlBuffer.append("</td></tr>");
+            htmlBuffer.append(HTML_END_TABLE_ROW);
         });
 
-        htmlBuffer.append("\r\t\t</table><BR>");
+        htmlBuffer.append(HTML_END_TABLE_ONE);
 
         htmlBuffer.append("\r\r\t\tJAX-RS Response");
 
         htmlBuffer.append("<BR><BR>\r\r\t\t<table>\r\t\t\t<tr><td>Element</td><td>Media Type</td><td>Default Status Code</td></tr>");
 
-        htmlBuffer.append("\r\t\t\t<tr><td>");
+        htmlBuffer.append(HTML_END_TABLE_ROW_NEW_TABLE_DATA);
 
         if (((methodInfo.getReturnInfo().getAnnotatedReturnType() == null)
                 || methodInfo.getReturnInfo().getAnnotatedReturnType().isEmpty())
-                && (isDomainData(methodInfo.getReturnInfo().getReturnClassName()) == false)) {
+                && !isDomainData(methodInfo.getReturnInfo().getReturnClassName())) {
 
             htmlBuffer.append(methodInfo.getReturnInfo().getReturnClassName());
 
@@ -342,9 +341,9 @@ public class HtmlOutput {
                 if (listIndex == -1) {
 
                     // Not a List<>
-                    htmlBuffer.append("\r\t\t<a href=./");
+                    htmlBuffer.append(HTML_NEW_ROW_HREF);
                     htmlBuffer.append(methodInfo.getReturnInfo().getReturnClassName());
-                    htmlBuffer.append(".html>");
+                    htmlBuffer.append(HTML_END_TAG);
                     htmlBuffer.append(methodInfo.getReturnInfo().getReturnClassName());
                     htmlBuffer.append("</a>");
 
@@ -355,60 +354,58 @@ public class HtmlOutput {
 
                     htmlBuffer.append("\r\t\tList&lt;<a href=./");
                     htmlBuffer.append(listType);
-                    htmlBuffer.append(".html>");
+                    htmlBuffer.append(HTML_END_TAG);
                     htmlBuffer.append(listType);
                     htmlBuffer.append("</a>&gt;");
                 }
             } else {
 
                 // Annotated ReturnType Domain data
-                htmlBuffer.append("\r\t\t<a href=./");
+                htmlBuffer.append(HTML_NEW_ROW_HREF);
                 htmlBuffer.append(methodInfo.getReturnInfo().getAnnotatedReturnType());
-                htmlBuffer.append(".html>");
+                htmlBuffer.append(HTML_END_TAG);
                 htmlBuffer.append(methodInfo.getReturnInfo().getAnnotatedReturnType());
                 htmlBuffer.append("</a>");
             }
         }
 
-        htmlBuffer.append("</td><td>");
+        htmlBuffer.append(HTML_NEW_TABLE_DATA);
 
-        htmlBuffer.append(methodInfo.getProducesType());
+        htmlBuffer.append(methodInfo.getProduceType());
 
-        htmlBuffer.append("</td><td>");
+        htmlBuffer.append(HTML_NEW_TABLE_DATA);
 
-        if(methodInfo.getReturnInfo().getReturnStatus() == null) {
-            
+        if (methodInfo.getReturnInfo().getReturnStatusAsText() == null) {
+
             htmlBuffer.append('-');
-            
+
         } else {
-            
-            htmlBuffer.append(methodInfo.getReturnInfo().getReturnStatus());
+
+            htmlBuffer.append(methodInfo.getReturnInfo().getReturnStatusAsText());
         }
 
         htmlBuffer.append("</td>\r\t\t\t</tr>\r\t\t</table><BR>");
     }
-    
+
     private String replaceLessThanAndGreaterThan(final String inString) {
-        
+
         return inString.replaceAll("<", "&lt;").replaceAll(">", "&gt;");
     }
 
     private void writeDomainDataToFiles(final File outputDirectory) {
 
-        LOGGER.info("writeDomainDataToFiles() restInfo.ClassInfo size = " + RestDocHandler.restInfo.getClassInfo().size());
+        LOGGER.info(() -> "writeDomainDataToFiles() restInfo.ClassInfo size = " + RestDocHandler.restInfo.getClassInfo().size());
 
         RestDocHandler.restInfo.getDomainDataMap().entrySet().stream()
-                .filter(Objects::nonNull).forEach(domainData -> {
-
-            writeDomainDataToFile(outputDirectory, domainData.getKey());
-        });
+                .filter(Objects::nonNull)
+                .forEach(domainData -> writeDomainDataToFile(outputDirectory, domainData.getKey()));
     }
 
     private void writeDomainDataToFile(final File outputDirectory, final String domainDataType) {
 
-        LOGGER.info("writeDomainDataToFile( " + domainDataType + " )");
+        LOGGER.info(() -> "writeDomainDataToFile( " + domainDataType + " )");
 
-        Path programmersInfoFilePath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + "/" + domainDataType + ".html"));
+        Path programmersInfoFilePath = Paths.get(URI.create(FILE_TYPE + outputDirectory.getAbsolutePath() + PATH_DELIMITER + domainDataType + ".html"));
 
         final StringBuilder htmlBuffer = htmlHeader();
 
@@ -425,47 +422,47 @@ public class HtmlOutput {
 
     private void htmlRestResourceDomainData(final StringBuilder htmlBuffer, final String domainDataType) {
 
-        LOGGER.info("htmlRestResourceDomainData() domainDataType = " + domainDataType);
+        LOGGER.info(() -> "htmlRestResourceDomainData() domainDataType = " + domainDataType);
 
-        HashMap domainData = RestDocHandler.restInfo.getDomainDataMap();
+        Map domainData = RestDocHandler.restInfo.getDomainDataMap();
 
         if (domainData.get(domainDataType) == null) {
 
-            LOGGER.severe("htmlRestResourceDomainData() domainDataType = " + domainDataType + "Not found in DomainData map");
+            LOGGER.severe(() -> "htmlRestResourceDomainData() domainDataType = " + domainDataType + "Not found in DomainData map");
             return;
         }
 
         final List<FieldInfo> fields = RestDocHandler.restInfo.getDomainDataMap().get(domainDataType).getFields();
 
-        htmlBuffer.append("\r\r\t\t<table>");
+        htmlBuffer.append(HTML_END_TABLE_TWO);
 
         if (RestDocHandler.restInfo.getDomainDataMap().get(domainDataType).getInfo() != null) {
 
-            htmlBuffer.append("\r\t\t\t<tr><td colspan=3>" + RestDocHandler.restInfo.getDomainDataMap().get(domainDataType).getInfo() + "</td></tr>");
+            htmlBuffer.append("\r\t\t\t<tr><td colspan=3>" + RestDocHandler.restInfo.getDomainDataMap().get(domainDataType).getInfo() + HTML_END_TABLE_ROW);
             htmlBuffer.append("\r\t\t\t<tr><td colspan=3></td></tr>");
         }
 
         htmlBuffer.append("\r\t\t\t<tr><td>Field name</td><td>Field type</td><td>Type in list</td></tr>");
 
-        fields.stream().forEach((field) -> {
+        fields.stream().forEach(field -> {
 
-            htmlBuffer.append("\r\t\t\t<tr><td>");
+            htmlBuffer.append(HTML_END_TABLE_ROW_NEW_TABLE_DATA);
 
             htmlBuffer.append(field.getFieldName());
 
-            htmlBuffer.append("</td><td>");
+            htmlBuffer.append(HTML_NEW_TABLE_DATA);
             htmlBuffer.append(field.getFieldType());
-            htmlBuffer.append("</td><td>");
+            htmlBuffer.append(HTML_NEW_TABLE_DATA);
 
             if (!field.getFieldOfType().isEmpty()) {
 
-                if ((field.getFieldOfType().contains(".") == true)
-                        && (field.getFieldOfType().startsWith("java.") == false)) {
+                if (field.getFieldOfType().contains(".")
+                        && !field.getFieldOfType().startsWith("java.")) {
 
                     // Domain data
-                    htmlBuffer.append("\r\t\t<a href=./");
+                    htmlBuffer.append(HTML_NEW_ROW_HREF);
                     htmlBuffer.append(field.getFieldOfType());
-                    htmlBuffer.append(".html>");
+                    htmlBuffer.append(HTML_END_TAG);
                     htmlBuffer.append(field.getFieldOfType());
                     htmlBuffer.append("</a>");
 
@@ -480,10 +477,10 @@ public class HtmlOutput {
                 htmlBuffer.append("-");
             }
 
-            htmlBuffer.append("</td></tr>");
+            htmlBuffer.append(HTML_END_TABLE_ROW);
         });
 
-        htmlBuffer.append("\r\t\t</table><BR>");
+        htmlBuffer.append(HTML_END_TABLE_ONE);
     }
 
     private StringBuilder htmlHeader() {
@@ -514,11 +511,11 @@ public class HtmlOutput {
     private void htmlFooter(final StringBuilder htmlBuffer) {
 
         htmlBuffer.append("\r\r\t<table style=\"border: none;\">");
-        htmlBuffer.append("\r\r\t\t<tr>");
+        htmlBuffer.append(HTML_NEW_ROW);
         htmlBuffer.append("\r\t\t\t<td style=\"border: none;\"><a href=\"#top\"><h4>To top</h4></a></td><td style=\"border: none;\"><a href=./index.html><h4>Home</h4></a></td>");
         htmlBuffer.append("\r\r\t\t</tr>");
         htmlBuffer.append("\r\r\t\t<tr></tr>");
-        htmlBuffer.append("\r\r\t\t<tr>");
+        htmlBuffer.append(HTML_NEW_ROW);
         htmlBuffer.append("\r\t\t\t<td style=\"border: none;\"><h4>&copy; Copyright Peter Ivarsson</h4></td>");
         htmlBuffer.append("\r\r\t\t</tr>");
         htmlBuffer.append("\r\r\t</table>");
@@ -528,9 +525,9 @@ public class HtmlOutput {
     private void htmlGoHome(final StringBuilder htmlBuffer) {
 
         htmlBuffer.append("\r\r\t<table style=\"border: none;\">");
-        htmlBuffer.append("\r\r\t\t<tr>");
+        htmlBuffer.append(HTML_NEW_ROW);
         htmlBuffer.append("\r\t\t\t<td style=\"border: none;\"><a href=./index.html><h4>Home</h4></a></td>");
-        htmlBuffer.append("\r\r\t\t<tr>");
+        htmlBuffer.append(HTML_NEW_ROW);
         htmlBuffer.append("\r\r\t<table>");
     }
 
@@ -549,53 +546,22 @@ public class HtmlOutput {
     private boolean isDomainData(final String parameterName) {
 
         // Check for 'Java classes' or 'Primitive Data Types'
-        if (parameterName.startsWith("java")) {
+        switch (parameterName) {
 
-            // Is a Java class
-            return false;
+            case "byte":
+            case "short":
+            case "int":
+            case "long":
+            case "float":
+            case "double":
+            case "boolean":
+            case "char":
+                // Is a Primitive Data Type
+                return false;
 
-        } else if (parameterName.equals("byte")) {
-
-            // Is a Primitive Data Type
-            return false;
-
-        } else if (parameterName.equals("short")) {
-
-            // Is a Primitive Data Type
-            return false;
-
-        } else if (parameterName.equals("int")) {
-
-            // Is a Primitive Data Type
-            return false;
-
-        } else if (parameterName.equals("long")) {
-
-            // Is a Primitive Data Type
-            return false;
-
-        } else if (parameterName.equals("float")) {
-
-            // Is a Primitive Data Type
-            return false;
-
-        } else if (parameterName.equals("double")) {
-
-            // Is a Primitive Data Type
-            return false;
-
-        } else if (parameterName.equals("boolean")) {
-
-            // Is a Primitive Data Type
-            return false;
-
-        } else if (parameterName.equals("char")) {
-
-            // Is a Primitive Data Type
-            return false;
+            default:
+                return !parameterName.startsWith("java");
         }
-
-        return true;
     }
 
     String replaceCarriageReturnWithHtmlBreak(String javaDocComments) {

@@ -13,7 +13,7 @@ public class ReturnInfo {
 
     private String returnClassName;
     private String annotatedReturnType;
-    private String returnStatus = "OK";
+    private String returnStatusAsText = "OK";
     private String returnStatusCode = "200";
 
     public String getReturnClassName() {
@@ -32,12 +32,12 @@ public class ReturnInfo {
         this.annotatedReturnType = annotatedReturnType;
     }
 
-    public String getReturnStatus() {
-        return returnStatus;
+    public String getReturnStatusAsText() {
+        return returnStatusAsText;
     }
 
-    public void setReturnStatus(String returnStatus) {
-        this.returnStatus = returnStatus;
+    public void setReturnStatusAsText(String returnStatusAsText) {
+        this.returnStatusAsText = returnStatusAsText;
     }
 
     public String getReturnStatusCode() {
@@ -50,6 +50,6 @@ public class ReturnInfo {
 
     @Override
     public String toString() {
-        return " ReturnInfo{" + "\n            returnClassName=" + returnClassName + ",\n            annotatedReturnType=" + annotatedReturnType + ",\n            returnStatus=" + returnStatus + ",\n            returnStatusCode=" + returnStatusCode + "\n         }";
+        return " ReturnInfo{" + "\n            returnClassName=" + returnClassName + ",\n            annotatedReturnType=" + annotatedReturnType + ",\n            returnStatusAsText=" + returnStatusAsText + ",\n            returnStatusCode=" + returnStatusCode + "\n         }";
     }
 }

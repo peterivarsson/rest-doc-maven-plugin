@@ -73,14 +73,6 @@ public class MethodInfo {
         this.consumeType = consumeType;
     }
 
-    public String getProducesType() {
-        return produceType;
-    }
-
-    public void setProducesType(String producesType) {
-        this.produceType = producesType;
-    }
-
     public ReturnInfo getReturnInfo() {
         return returnInfo;
     }

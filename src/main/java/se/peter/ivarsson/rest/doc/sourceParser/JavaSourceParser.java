@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2017 Peter Ivarsson
  */
-package se.peter.ivarsson.rest.doc.sourceParser;
+package se.peter.ivarsson.rest.doc.sourceparser;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,7 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 import se.peter.ivarsson.rest.doc.parser.PathInfo;
@@ -25,6 +25,9 @@ import se.peter.ivarsson.rest.doc.parser.ResponseType;
 public class JavaSourceParser {
 
     private static final Logger LOGGER = Logger.getLogger(JavaSourceParser.class.getSimpleName());
+
+    private static final String PUBLIC_TYPE = "public ";
+    private static final String JAVA_FILE_TYPE = ".java";
 
     // JavaDoc parsing
     private int javaDocStartIndexOffset = -1;
@@ -46,10 +49,7 @@ public class JavaSourceParser {
     private String classPathTemporary = "";
     private String classPath = "";
 
-    // Constants parsing
-    private boolean isClass = false;
-
-    public void parseClassForJavaDocComments(final File sourceDiretory, final HashMap<String, String> javaDocComments, final String className) {
+    public void parseClassForJavaDocComments(final File sourceDiretory, final Map<String, String> javaDocComments, final String className) {
 
         // Starting point
         javaDocStartIndexOffset = -1;
@@ -63,10 +63,7 @@ public class JavaSourceParser {
         // Read file into stream
         try (Stream<String> stream = Files.lines(Paths.get(javaFilePath))) {
 
-            stream.forEach(line -> {
-
-                parseFileForComments(line, javaDocComments, className);
-            });
+            stream.forEach(line -> parseFileForComments(line, javaDocComments));
 
         } catch (IOException ioe) {
 
@@ -74,16 +71,16 @@ public class JavaSourceParser {
         }
     }
 
-    private void parseFileForComments(final String line, final HashMap<String, String> javaDocComments, final String className) {
+    private void parseFileForComments(final String line, final Map<String, String> javaDocComments) {
 
         if (javaDocStartIndexOffset < 0) {
 
             javaDocStartIndexOffset = line.indexOf("/**");
         }
 
-        if (javaDocEndReached == false) {
+        if (!javaDocEndReached) {
 
-            if ((javaDocStartIndexOffset != -1) && (javaDocReadingComments == false)) {
+            if ((javaDocStartIndexOffset != -1) && !javaDocReadingComments) {
 
                 javaDocComment = new StringBuilder(line);
                 javaDocComment.append('\r');
@@ -91,7 +88,7 @@ public class JavaSourceParser {
 
             } else {
 
-                if (javaDocReadingComments == true) {
+                if (javaDocReadingComments) {
 
                     javaDocComment.append(line.substring(javaDocStartIndexOffset));
                     javaDocComment.append('\r');
@@ -111,12 +108,12 @@ public class JavaSourceParser {
 
             if (publicMethodOffset != -1) {
                 // Skip public
-                findMethodNameAndAddToHashMap(line.substring(publicMethodOffset + 7), javaDocComments, className);
+                findMethodNameAndAddToHashMap(line.substring(publicMethodOffset + 7), javaDocComments);
             }
         }
     }
 
-    private void findMethodNameAndAddToHashMap(final String line, final HashMap<String, String> javaDocComments, final String className) {
+    private void findMethodNameAndAddToHashMap(final String line, final Map<String, String> javaDocComments) {
 
         int endMethodNameOffset = line.indexOf('(');
 
@@ -144,9 +141,9 @@ public class JavaSourceParser {
         }
     }
 
-    public void parseSourceFile(final File sourceDiretory, final HashMap<String, String> javaEnums,
-            final HashMap<String, ResponseType> responseTypes, final HashMap<String, PathInfo> classPaths,
-            final HashMap<String, String> constants, final Path sourceFilePath, final URLClassLoader urlClassLoader) {
+    public void parseSourceFile(final File sourceDiretory, final Map<String, String> javaEnums,
+            final Map<String, ResponseType> responseTypes, final Map<String, PathInfo> classPaths,
+            final Map<String, String> constants, final Path sourceFilePath, final URLClassLoader urlClassLoader) {
 
         LOGGER.info(() -> "parseSourceFile(), Checking source file " + sourceFilePath + " for enums and response types");
 
@@ -157,8 +154,6 @@ public class JavaSourceParser {
         classPathAnnotationFound = false;
         classPathTemporary = "";
         classPath = "";
-
-        isClass = false;
 
         String className = getFullClassNameFromSourcesDir(sourceDiretory, sourceFilePath);
 
@@ -185,7 +180,7 @@ public class JavaSourceParser {
 
                 findClassPaths(line, classPaths, className);
 
-                findConstants(line, constants, className);
+                findConstants(line, isClass[0], constants, className);
             });
 
         } catch (IOException ioe) {
@@ -194,11 +189,11 @@ public class JavaSourceParser {
         }
     }
 
-    private void findEnumsInFile(final String line, final HashMap<String, String> javaEnums, final Path sourceFilePath,
+    private void findEnumsInFile(final String line, final Map<String, String> javaEnums, final Path sourceFilePath,
             final Boolean inClass, String enumListForClass, final URLClassLoader urlClassLoader) {
 
         // Search for enum in public methods
-        int publicMethodOffset = line.indexOf("public ");
+        int publicMethodOffset = line.indexOf(PUBLIC_TYPE);
         int startEnumOffset = line.indexOf(" enum ");
         int endEnumOffset = line.indexOf('{');
 
@@ -219,7 +214,7 @@ public class JavaSourceParser {
                 if (inClass) {
 
                     // Enum inside a class
-                    int endJavaSuffixIndex = sourceFile.indexOf(".java", startSourcesFolderIndex);
+                    int endJavaSuffixIndex = sourceFile.indexOf(JAVA_FILE_TYPE, startSourcesFolderIndex);
 
                     enumTypeWithPath = sourceFile.substring(startSourcesFolderIndex, endJavaSuffixIndex).replace('/', '.') + '$' + enumType;
 
@@ -241,9 +236,9 @@ public class JavaSourceParser {
         }
     }
 
-    private void findResponseOkType(final String line, final HashMap<String, ResponseType> responseTypes, final String className) {
+    private void findResponseOkType(final String line, final Map<String, ResponseType> responseTypes, final String className) {
 
-        if (responseTypeAnnotationFound == false) {
+        if (!responseTypeAnnotationFound) {
 
             // Search for enum in public methods
             if (isPathAnnotation(line) != -1) {
@@ -254,7 +249,7 @@ public class JavaSourceParser {
             return; //  No path found yet
         }
 
-        if (responseTypePublicReponseFound == false) {
+        if (!responseTypePublicReponseFound) {
 
             String methodName;
 
@@ -278,12 +273,12 @@ public class JavaSourceParser {
                 if (responseOkOffset != -1) {
 
                     // Http status OK
-                    int responseOkStartOffset = line.indexOf("(", responseOkOffset);
+                    int responseOkStartOffset = line.indexOf('(', responseOkOffset);
 
                     if (responseOkStartOffset != -1) {
 
                         // Get Response OK variable name
-                        int responseOkEndOffset = line.indexOf(")", responseOkStartOffset);
+                        int responseOkEndOffset = line.indexOf(')', responseOkStartOffset);
 
                         if (responseOkEndOffset != -1) {
 
@@ -347,9 +342,9 @@ public class JavaSourceParser {
         }
     }
 
-    private void findClassPaths(final String line, final HashMap<String, PathInfo> classPaths, final String className) {
+    private void findClassPaths(final String line, final Map<String, PathInfo> classPaths, final String className) {
 
-        if (classPathAnnotationFound == false) {
+        if (!classPathAnnotationFound) {
 
             int pathOffset = isPathAnnotation(line);
 
@@ -379,7 +374,7 @@ public class JavaSourceParser {
             return;
         }
 
-        if (classPathAnnotationFound == false) {
+        if (!classPathAnnotationFound) {
 
             if (isPathAnnotation(line) != -1) {
 
@@ -472,7 +467,7 @@ public class JavaSourceParser {
 
                 if (pathList.length > 0) {
 
-                    String classPathTemporary = "";
+                    StringBuilder compleatePath = new StringBuilder();
                     int index = 0;
 
                     while (index < pathList.length) {
@@ -485,14 +480,16 @@ public class JavaSourceParser {
 
                         if (importClasses.containsKey(pathList[index])) {
 
-                            classPathTemporary = classPathTemporary + importClasses.get(pathList[index]);
+                            compleatePath.append(importClasses.get(pathList[index]));
 
                         } else {
 
-                            classPathTemporary = classPathTemporary + pathList[index];
+                            compleatePath.append(pathList[index]);
                         }
                         index++;
                     }
+                    
+                    classPathTemporary = compleatePath.toString();
                 }
             } else {
 
@@ -508,19 +505,15 @@ public class JavaSourceParser {
         }
     }
 
-    private void findConstants(final String line, final HashMap<String, String> constants, final String className) {
+    private void findConstants(final String line, final Boolean isClass, final Map<String, String> constants, final String className) {
 
-        if (isClass == false) {
+        if (isClass) {
 
-            if (isClass(line)) {
-
-                isClass = true;
-            }
             return;
         }
 
         // Find constants
-        //     static final String PATH_CLEAR_CACHE_RESOURCE = "/clearcache";
+        // Like:    static final String PATH_CLEAR_CACHE_RESOURCE = "/clearcache";
         int privateOffset = line.indexOf("private");
         int staticOffset = line.indexOf("static");
         int finalOffset = line.indexOf("final", staticOffset + 1);
@@ -532,27 +525,24 @@ public class JavaSourceParser {
 
             String[] constantList = constant.split("\\s+");
 
-            if (constantList.length > 3) {
+            if ((constantList.length > 3) && constantList[constantList.length - 4].equals("String") && constantList[constantList.length - 2].equals("=")) {
 
-                if (constantList[constantList.length - 4].equals("String") && constantList[constantList.length - 2].equals("=")) {
+                String value = constantList[constantList.length - 1];
 
-                    String value = constantList[constantList.length - 1];
+                int firstQuoteOffset = value.indexOf('\"');
+                int secondQuoteOffset = value.indexOf('\"', firstQuoteOffset + 1);
 
-                    int firstQuoteOffset = value.indexOf('\"');
-                    int secondQuoteOffset = value.indexOf('\"', firstQuoteOffset + 1);
+                if ((firstQuoteOffset != -1) && (secondQuoteOffset != -1)) {
 
-                    if ((firstQuoteOffset != -1) && (secondQuoteOffset != -1)) {
+                    constants.put(className + '.' + constantList[constantList.length - 3], value.substring(firstQuoteOffset + 1, secondQuoteOffset));
 
-                        constants.put(className + '.' + constantList[constantList.length - 3], value.substring(firstQuoteOffset + 1, secondQuoteOffset));
+                } else {
 
-                    } else {
+                    int semiColonOffset = value.indexOf(';', firstQuoteOffset + 1);
 
-                        int semiColonOffset = value.indexOf(';', firstQuoteOffset + 1);
+                    if (semiColonOffset != -1) {
 
-                        if (semiColonOffset != -1) {
-
-                            constants.put(className + '.' + constantList[constantList.length - 3], value.substring(0, semiColonOffset));
-                        }
+                        constants.put(className + '.' + constantList[constantList.length - 3], value.substring(0, semiColonOffset));
                     }
                 }
             }
@@ -560,60 +550,59 @@ public class JavaSourceParser {
     }
 
     private void findOutHttpStatusCode(final String line, final int responseOffset, final String responseTypeKey,
-            final HashMap<String, ResponseType> responseTypes) {
+            final Map<String, ResponseType> responseTypes) {
 
-        int responseDotOffset = line.indexOf(".", responseOffset);
-        int responseParenthesesStartOffset = line.indexOf("(", responseDotOffset);
+        int responseDotOffset = line.indexOf('.', responseOffset);
 
-        if ((responseDotOffset != -1) && (responseDotOffset != -1)) {
+        if (responseDotOffset != -1) {
 
-            ResponseType responseType = new ResponseType();
+            int responseParenthesesStartOffset = line.indexOf('(', responseDotOffset);
 
-            String httpStatusMethod = line.substring(responseOffset + 9, responseParenthesesStartOffset);
+            if (responseParenthesesStartOffset != -1) {
 
-            switch (httpStatusMethod) {
+                ResponseType responseType = new ResponseType();
 
-                case "accepted":
-                    responseType.setReturnStatus("ACCEPTED");
-                    responseType.setReturnStatusCode("202");
-                    break;
+                String httpStatusMethod = line.substring(responseOffset + 9, responseParenthesesStartOffset);
 
-                case "noContent":
-                    responseType.setReturnStatus("NO_CONTENT");
-                    responseType.setReturnStatusCode("204");
-                    break;
+                switch (httpStatusMethod) {
 
-                case "notAcceptable":
-                    responseType.setReturnStatus("NOT_ACCEPTABLE");
-                    responseType.setReturnStatusCode("406");
-                    break;
+                    case "accepted":
+                        responseType.setReturnStatus("ACCEPTED");
+                        responseType.setReturnStatusCode("202");
+                        break;
 
-                case "notModified":
-                    responseType.setReturnStatus("NOT_MODIFIED");
-                    responseType.setReturnStatusCode("304");
-                    break;
+                    case "noContent":
+                        responseType.setReturnStatus("NO_CONTENT");
+                        responseType.setReturnStatusCode("204");
+                        break;
 
-                case "ok":
-                    responseType.setReturnStatus("OK");
-                    responseType.setReturnStatusCode("200");
-                    break;
+                    case "notAcceptable":
+                        responseType.setReturnStatus("NOT_ACCEPTABLE");
+                        responseType.setReturnStatusCode("406");
+                        break;
 
-                case "serverError":
-                    responseType.setReturnStatus("INTERNAL_SERVER_ERROR");
-                    responseType.setReturnStatusCode("500");
-                    break;
+                    case "notModified":
+                        responseType.setReturnStatus("NOT_MODIFIED");
+                        responseType.setReturnStatusCode("304");
+                        break;
 
-                case "status":
-                    parseHttpStatusFromStatusMethod(line, responseParenthesesStartOffset, responseType);
-                    break;
+                    case "serverError":
+                        responseType.setReturnStatus("INTERNAL_SERVER_ERROR");
+                        responseType.setReturnStatusCode("500");
+                        break;
 
-                default:
-                    responseType.setReturnStatus("OK");
-                    responseType.setReturnStatusCode("200");
-                    break;
+                    case "status":
+                        parseHttpStatusFromStatusMethod(line, responseParenthesesStartOffset, responseType);
+                        break;
+
+                    default:
+                        responseType.setReturnStatus("OK");
+                        responseType.setReturnStatusCode("200");
+                        break;
+                }
+
+                responseTypes.put(responseTypeKey, responseType);
             }
-
-            responseTypes.put(responseTypeKey, responseType);
         }
     }
 
@@ -623,7 +612,7 @@ public class JavaSourceParser {
 
         if (statusStatusCodeBeginningOffset != -1) {
 
-            int responseParenthesesEndOffset = line.indexOf(")", statusStatusCodeBeginningOffset);
+            int responseParenthesesEndOffset = line.indexOf(')', statusStatusCodeBeginningOffset);
 
             if (responseParenthesesEndOffset != -1) {
 
@@ -754,7 +743,7 @@ public class JavaSourceParser {
 
     private void addVariableAndTypeToHashList(final String line) {
 
-        int equalsOffset = line.indexOf("=");
+        int equalsOffset = line.indexOf('=');
         int equalityOperatorsOffset = line.indexOf("==");
 
         if ((equalsOffset != -1) && (equalityOperatorsOffset == -1)) {
@@ -845,7 +834,7 @@ public class JavaSourceParser {
 
     private String getSourceFileNameFromClassName(File sourceDiretory, String className) {
 
-        return sourceDiretory.getAbsolutePath() + "/" + className.replaceAll("[.]", "/") + ".java";
+        return sourceDiretory.getAbsolutePath() + "/" + className.replaceAll("[.]", "/") + JAVA_FILE_TYPE;
     }
 
     private String getFullClassNameFromSourcesDir(final File sourceDiretory, final Path sourceNamePath) {
@@ -863,16 +852,16 @@ public class JavaSourceParser {
 
         for (int i = 0; i < pathCount; i++) {
 
-            if (addDot == true) {
+            if (addDot) {
 
                 packetAndclassName.append(".");
             }
 
             pathName = sourceNamePath.getName(i).toString();
 
-            if (addPackageName == true) {
+            if (addPackageName) {
 
-                classIndex = pathName.indexOf(".java");
+                classIndex = pathName.indexOf(JAVA_FILE_TYPE);
 
                 if (classIndex > 0) {
 
@@ -913,7 +902,7 @@ public class JavaSourceParser {
 
     String isResponseMethod(final String line) {
 
-        int publicMethodOffset = line.indexOf("public ");
+        int publicMethodOffset = line.indexOf(PUBLIC_TYPE);
 
         if (publicMethodOffset != -1) {
 
@@ -931,7 +920,7 @@ public class JavaSourceParser {
 
     String isPublicMethod(final String line) {
 
-        int publicMethodOffset = line.indexOf("public ");
+        int publicMethodOffset = line.indexOf(PUBLIC_TYPE);
 
         if (publicMethodOffset != -1) {
 
@@ -956,11 +945,6 @@ public class JavaSourceParser {
         int classOffset = line.indexOf(" class ");
         int classStartOffset = line.indexOf('{', classOffset);
 
-        if ((classOffset != -1) && (classStartOffset != -1)) {
-
-            return true;
-        }
-
-        return false;
+        return (classOffset != -1) && (classStartOffset != -1);
     }
 }

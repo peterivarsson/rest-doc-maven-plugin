@@ -17,12 +17,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
-import se.peter.ivarsson.rest.doc.sourceParser.JavaSourceParser;
+import java.util.stream.Stream;
 import se.peter.ivarsson.rest.doc.utils.LoggingUtils;
+import se.peter.ivarsson.rest.doc.sourceparser.JavaSourceParser;
 
 /**
  *
@@ -42,7 +45,7 @@ public class RestDocHandler {
     private final HashMap<String, PathInfo> classPaths = new HashMap<>();
     private final HashMap<String, String> constants = new HashMap<>();
 
-    public static RestInfo restInfo = new RestInfo();
+    public static final RestInfo restInfo = new RestInfo();
 
     /**
      *
@@ -65,10 +68,10 @@ public class RestDocHandler {
             LOGGER.severe("MalformedURLException: " + mue.getMessage());
         }
 
-        try {
+        //  Parse source files
+        try (Stream<Path> sourceStream = Files.walk(Paths.get(sourceDirectory.toURI()))) {
 
-            Files.walk(Paths.get(sourceDirectory.toURI()))
-                    .filter(Files::isRegularFile)
+            sourceStream.filter(Files::isRegularFile)
                     .forEach(path -> {
 
                         LOGGER.info("Source path: " + path);
@@ -78,41 +81,49 @@ public class RestDocHandler {
                             javaSourceParser.parseSourceFile(sourceDirectory, enumTypes, responseTypes, classPaths, constants, path, urlClassLoader);
                         }
                     });
+        } catch (IOException ioe) {
 
-            Files.walk(Paths.get(classesDirectory.toURI()))
-                    .filter(Files::isRegularFile)
+            LOGGER.severe(() -> "IOException reading source files: " + ioe.getMessage());
+
+            LOGGER.severe(Arrays.toString(ioe.getStackTrace()));
+        }
+
+        // Parse classes files
+        try (Stream<Path> classesStream = Files.walk(Paths.get(classesDirectory.toURI()))) {
+
+            classesStream.filter(Files::isRegularFile)
                     .forEach(path -> {
 
-                        LOGGER.info("Class path: " + path);
+                        LOGGER.info("Classes path: " + path);
 
                         if (path.toString().endsWith(".class")) {
 
                             checkClassFilesForPathAnnotations(classesDirectory, path, sourceDirectory);
                         }
                     });
-
-            restInfo.getClassInfo().stream()
-                    .forEach(classinfo -> {
-
-                        updatePaths(classinfo);
-                        updateParameters(classinfo);
-                    });
-
         } catch (IOException ioe) {
 
-            LOGGER.severe("IOException reading war file: " + ioe.getMessage());
+            LOGGER.severe(() -> "IOException reading classes files: " + ioe.getMessage());
 
-            ioe.printStackTrace();
+            LOGGER.severe(Arrays.toString(ioe.getStackTrace()));
         }
+
+        // Update paths and parameters
+        restInfo.getClassInfo().stream()
+                .forEach(classinfo -> {
+
+                    updatePaths(classinfo);
+                    updateParameters(classinfo);
+                });
 
         LOGGER.info("REST documentation ENDED analyzing\n");
 
-        LOGGER.info(restInfo.toString());
+        LOGGER.info(restInfo::toString);
     }
 
     private void checkClassFilesForPathAnnotations(final File classesDirectory, final Path classNamePath, final File sourceDirectory) {
 
-        LOGGER.info("Class file: " + classNamePath.getFileName().toString());
+        LOGGER.info(() -> "Class file: " + classNamePath.getFileName().toString());
 
         ClassInfo classInfo = getFullClassNameFromClassesDir(classesDirectory, classNamePath);
 
@@ -133,8 +144,6 @@ public class RestDocHandler {
             for (Annotation annotation : annotations) {
 
                 if (annotation instanceof javax.ws.rs.Path) {
-
-                    String pathValue = ((javax.ws.rs.Path) annotation).value();
 
                     // We found a class with Path annotation
                     addClassInfoToRestInfoList(classInfo, (javax.ws.rs.Path) annotation);
@@ -169,14 +178,14 @@ public class RestDocHandler {
 
         for (int i = 0; i < pathCount; i++) {
 
-            if (addDot == true) {
+            if (addDot) {
 
                 packetAndclassName.append(".");
             }
 
             pathName = classNamePath.getName(i).toString();
 
-            if (addPackageName == true) {
+            if (addPackageName) {
 
                 classIndex = pathName.indexOf(".class");
 
@@ -262,19 +271,10 @@ public class RestDocHandler {
 
         for (Annotation annotation : methodAnnotations) {
 
-            if (annotation instanceof javax.ws.rs.GET) {
-
-                return true;
-
-            } else if (annotation instanceof javax.ws.rs.POST) {
-
-                return true;
-
-            } else if (annotation instanceof javax.ws.rs.PUT) {
-
-                return true;
-
-            } else if (annotation instanceof javax.ws.rs.DELETE) {
+            if ((annotation instanceof javax.ws.rs.GET)
+                    || (annotation instanceof javax.ws.rs.POST)
+                    || (annotation instanceof javax.ws.rs.PUT)
+                    || (annotation instanceof javax.ws.rs.DELETE)) {
 
                 return true;
             }
@@ -327,7 +327,7 @@ public class RestDocHandler {
         StringBuilder consumeTypes = new StringBuilder();
         boolean firstConsumeType = true;
 
-        LOGGER.info("addMethodsPathMethod() Method: " + method.toGenericString());
+        LOGGER.info(() -> "addMethodsPathMethod() Method: " + method.toGenericString());
 
         methodInfo.setMethodPath("");
 
@@ -335,7 +335,7 @@ public class RestDocHandler {
 
         for (Annotation annotation : methodAnnotations) {
 
-            LOGGER.info("Method Annotation: " + annotation.annotationType().toGenericString());
+            LOGGER.info(() -> "Method Annotation: " + annotation.annotationType().toGenericString());
 
             if (annotation instanceof javax.ws.rs.GET) {
 
@@ -385,7 +385,7 @@ public class RestDocHandler {
 
                 for (String returnType : produces.value()) {
 
-                    if (firstProduceType == true) {
+                    if (firstProduceType) {
 
                         firstProduceType = false;
 
@@ -397,7 +397,7 @@ public class RestDocHandler {
                     producesTypes.append(returnType);
                 }
 
-                methodInfo.setProducesType(producesTypes.toString());
+                methodInfo.setProduceType(producesTypes.toString());
 
             } else if (annotation instanceof javax.ws.rs.Consumes) {
 
@@ -405,7 +405,7 @@ public class RestDocHandler {
 
                 for (String consumeType : consumes.value()) {
 
-                    if (firstConsumeType == true) {
+                    if (firstConsumeType) {
 
                         firstConsumeType = false;
 
@@ -445,7 +445,7 @@ public class RestDocHandler {
             }
 
             returnInfo.setReturnClassName(returnTypeName);
-            returnInfo.setReturnStatus(responseType.getReturnStatus());
+            returnInfo.setReturnStatusAsText(responseType.getReturnStatus());
             returnInfo.setReturnStatusCode(responseType.getReturnStatusCode());
 
         } else {
@@ -457,7 +457,7 @@ public class RestDocHandler {
 
         if (isDomainData(returnTypeName)) {
 
-            DataModelInfo dataModelInfo = addDomainDataInfo(returnTypeName);
+            addDomainDataInfo(returnTypeName);
         }
     }
 
@@ -479,7 +479,7 @@ public class RestDocHandler {
 
         if (listStartIndex != -1) {
 
-            int listEndIndex = className.indexOf(">", listStartIndex);
+            int listEndIndex = className.indexOf('>', listStartIndex);
 
             if (listEndIndex != -1) {
 
@@ -492,11 +492,11 @@ public class RestDocHandler {
         if (domainData != null) {
 
             // This data already exists
-            LOGGER.info(className + " already exists in domain data");
+            LOGGER.log(Level.INFO, "{0} already exists in domain data", className);
             return null;
         }
 
-        LOGGER.info("Add " + className + " to domain data");
+        LOGGER.log(Level.INFO, "Add {0} to domain data", className);
 
         HashSet<String> addDomainDataSet = new HashSet();
 
@@ -540,15 +540,13 @@ public class RestDocHandler {
                                 startIndex = 2;
                             }
 
-                            char fieldName[] = method.getName().substring(startIndex).toCharArray();
+                            char[] fieldName = method.getName().substring(startIndex).toCharArray();
                             fieldName[0] = Character.toLowerCase(fieldName[0]);
 
                             fieldInfo.setFieldName(new String(fieldName));
                             fieldInfo.setFieldType(fieldType);
 
                             for (Annotation annotation : method.getAnnotations()) {
-
-                                String name = annotation.toString();
 
                                 if (annotation instanceof se.peter.ivarsson.rest.doc.rest.type.DocListType) {
 
@@ -603,19 +601,16 @@ public class RestDocHandler {
                             } else {
 
                                 // ListOfType not empty
-                                if (isDomainData(fieldInfo.getFieldOfType())) {
+                                if (isDomainData(fieldInfo.getFieldOfType()) && enumTypes.containsKey(fieldInfo.getFieldOfType())) {
 
-                                    if (enumTypes.containsKey(fieldInfo.getFieldOfType())) {
+                                    // Found enum in set
+                                    int lastDotIndex = fieldInfo.getFieldOfType().lastIndexOf('.');
 
-                                        // Found enum in set
-                                        int lastDotIndex = fieldInfo.getFieldOfType().lastIndexOf('.');
+                                    if (lastDotIndex != -1) {
 
-                                        if (lastDotIndex != -1) {
-
-                                            fieldInfo.setFieldName(fieldInfo.getFieldOfType().substring(lastDotIndex + 1));
-                                            fieldInfo.setFieldType("enum");
-                                            fieldInfo.setFieldOfType(enumTypes.get(fieldInfo.getFieldOfType()));
-                                        }
+                                        fieldInfo.setFieldName(fieldInfo.getFieldOfType().substring(lastDotIndex + 1));
+                                        fieldInfo.setFieldType("enum");
+                                        fieldInfo.setFieldOfType(enumTypes.get(fieldInfo.getFieldOfType()));
                                     }
                                 }
                             }
@@ -625,23 +620,20 @@ public class RestDocHandler {
                     } else {
 
                         // NO getter methods exists, check if enum is needed to be added
-                        if (isDomainData(className) && !enumFieldAdded) {
+                        if (isDomainData(className) && !enumFieldAdded && enumTypes.containsKey(className)) {
 
-                            if (enumTypes.containsKey(className)) {
+                            // Found enum in set
+                            int lastDotIndex = className.lastIndexOf('.');
 
-                                // Found enum in set
-                                int lastDotIndex = className.lastIndexOf('.');
+                            if (lastDotIndex != -1) {
 
-                                if (lastDotIndex != -1) {
+                                fieldInfo.setFieldName(className.substring(lastDotIndex + 1));
+                                fieldInfo.setFieldType("enum");
+                                fieldInfo.setFieldOfType(enumTypes.get(className));
 
-                                    fieldInfo.setFieldName(className.substring(lastDotIndex + 1));
-                                    fieldInfo.setFieldType("enum");
-                                    fieldInfo.setFieldOfType(enumTypes.get(className));
+                                dataModelInfo.getFields().add(fieldInfo);
 
-                                    dataModelInfo.getFields().add(fieldInfo);
-
-                                    enumFieldAdded = true;
-                                }
+                                enumFieldAdded = true;
                             }
                         }
                     }
@@ -654,7 +646,7 @@ public class RestDocHandler {
                 if (lastDotIndex != -1) {
 
                     StringBuilder enumList = new StringBuilder();
-                    
+
                     for (Enum myEnum : enumConstantsArray) {
 
                         enumList.append(myEnum);
@@ -686,10 +678,7 @@ public class RestDocHandler {
             restInfo.getDomainDataMap().put(className, dataModelInfo);
 
             addDomainDataSet.stream()
-                    .forEach(domaindata -> {
-
-                        addDomainDataInfo(domaindata.toString());
-                    });
+                    .forEach(this::addDomainDataInfo);
 
         } catch (ClassNotFoundException cnfe) {
 
@@ -862,53 +851,22 @@ public class RestDocHandler {
     private boolean isDomainData(final String parameterName) {
 
         // Check for 'Java classes' or 'Primitive Data Types'
-        if (parameterName.startsWith("java")) {
+        switch (parameterName) {
 
-            // Is a Java class
-            return false;
+            case "byte":
+            case "short":
+            case "int":
+            case "long":
+            case "float":
+            case "double":
+            case "boolean":
+            case "char":
+                // Is a Primitive Data Type
+                return false;
 
-        } else if (parameterName.equals("byte")) {
-
-            // Is a Primitive Data Type
-            return false;
-
-        } else if (parameterName.equals("short")) {
-
-            // Is a Primitive Data Type
-            return false;
-
-        } else if (parameterName.equals("int")) {
-
-            // Is a Primitive Data Type
-            return false;
-
-        } else if (parameterName.equals("long")) {
-
-            // Is a Primitive Data Type
-            return false;
-
-        } else if (parameterName.equals("float")) {
-
-            // Is a Primitive Data Type
-            return false;
-
-        } else if (parameterName.equals("double")) {
-
-            // Is a Primitive Data Type
-            return false;
-
-        } else if (parameterName.equals("boolean")) {
-
-            // Is a Primitive Data Type
-            return false;
-
-        } else if (parameterName.equals("char")) {
-
-            // Is a Primitive Data Type
-            return false;
+            default:
+                return !parameterName.startsWith("java");
         }
-
-        return true;
     }
 
     /*
@@ -938,20 +896,20 @@ public class RestDocHandler {
                 paths.add(pathInfo.getClassPath().replace("^/", ""));
             }
 
-            String totalPath = "/";
+            StringBuilder totalPath = new StringBuilder("/");
 
             for (int index = paths.size() - 1; index >= 0; index--) {
 
-                totalPath = totalPath + paths.get(index);
+                totalPath.append(paths.get(index));
             }
 
-            if (totalPath.endsWith("/")) {
+            if (totalPath.toString().endsWith("/")) {
 
-                classInfo.setClassRootPath(totalPath.substring(0, totalPath.length() - 1));
+                classInfo.setClassRootPath(totalPath.toString().substring(0, totalPath.toString().length() - 1));
 
             } else {
 
-                classInfo.setClassRootPath(totalPath);
+                classInfo.setClassRootPath(totalPath.toString());
             }
         }
     }

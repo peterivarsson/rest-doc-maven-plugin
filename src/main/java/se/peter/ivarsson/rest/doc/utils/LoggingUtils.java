@@ -18,7 +18,11 @@ import java.util.logging.SimpleFormatter;
 public class LoggingUtils {
 
     private static FileHandler fileHandler;
-    private static SimpleFormatter simpleFormatter;
+
+    private LoggingUtils() {
+
+        throw new IllegalStateException("LoggingUtils class");
+    }
 
     public static void addLoggingFileHandler(final File loggingDirectory, Logger logger) {
 
@@ -29,7 +33,7 @@ public class LoggingUtils {
                 String logFilePath = loggingDirectory.getAbsolutePath() + "/RestDoc.log";
 
                 fileHandler = new FileHandler(logFilePath, false);
-                simpleFormatter = new SimpleFormatter();
+                SimpleFormatter simpleFormatter = new SimpleFormatter();
                 fileHandler.setFormatter(simpleFormatter);
             }
 
@@ -38,7 +42,6 @@ public class LoggingUtils {
         } catch (IOException ioe) {
 
             logger.severe(() -> "IOException: " + ioe.getMessage());
-            System.out.println(ioe.getMessage());
         }
     }
 }

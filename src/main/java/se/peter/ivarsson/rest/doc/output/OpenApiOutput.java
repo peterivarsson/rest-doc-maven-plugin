@@ -3,7 +3,7 @@
  * 
  * Copyright (C) 2017 Peter Ivarsson
  */
-package se.peter.ivarsson.rest.doc.html;
+package se.peter.ivarsson.rest.doc.output;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,6 +15,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.logging.Logger;
+import se.peter.ivarsson.rest.doc.mojo.ConfigParameters;
 import se.peter.ivarsson.rest.doc.parser.ClassInfo;
 import se.peter.ivarsson.rest.doc.parser.DataModelInfo;
 import se.peter.ivarsson.rest.doc.parser.MethodInfo;
@@ -31,62 +32,66 @@ public class OpenApiOutput {
 
     private static final Logger LOGGER = Logger.getLogger(OpenApiOutput.class.getSimpleName());
 
-    final String NO_COLLECTION = "";
+    private static final String NO_COLLECTION = "";
+    private static final String PATH_DELIMITER = "/";
+    private static final String JAVA_LIST = "java.util.List";
+    private static final String YAML_URL = "  - url: ";
+    private static final String YAML_DESCRIPTION = "\n          description: ";
+    private static final String YAML_PARAMETERS = "\n      parameters:";
+    private static final String YAML_NEW_ROW = "\n            ";
+    private static final String YAML_FORMAT = "\n            format: ";
+    private static final String YAML_REFERENCE = "$ref:";
+    private static final String YAML_ARRAY = "array";
+    private static final String YAML_STRING = "string";
 
     private final HashSet<String> startAddedcomponents = new HashSet<>();
     private final HashMap<String, String> components = new HashMap<>();
     private final HashMap<String, String> methodPaths = new HashMap<>();
 
-    public void createOpenApiDocumantation(final File outputDirectory, final File loggingDirectory,
-            final String projectTitle, final String openApiDocVersion,
-            final String openApiLicenceName, final String openApiDevelopmentServerUrl,
-            final String openApiStagingServerUrl, final String openApiProductionServerUrl) {
+    public void createOpenApiDocumantation(final ConfigParameters configParameters) {
 
-        LoggingUtils.addLoggingFileHandler(loggingDirectory, LOGGER);
+        LoggingUtils.addLoggingFileHandler(configParameters.getLoggingDirectory(), LOGGER);
 
         StringBuilder openApiBuffer = new StringBuilder("openapi: \"3.0.1\"\n");
 
-        writeOpenApiInfo(openApiBuffer, projectTitle, openApiDocVersion, openApiLicenceName,
-                openApiDevelopmentServerUrl, openApiStagingServerUrl, openApiProductionServerUrl);
+        writeOpenApiInfo(openApiBuffer, configParameters);
 
         writePaths(openApiBuffer);
 
         writeComponentsList(openApiBuffer);
 
-        writeOpenApiToFile(outputDirectory, openApiBuffer, projectTitle);
+        writeOpenApiToFile(configParameters.getOutputDirectory(), openApiBuffer, configParameters.getProjectTitle());
     }
 
-    private void writeOpenApiInfo(final StringBuilder openApiBuffer, final String projectTitle, final String openApiDocVersion,
-            final String openApiLicenceName, final String openApiDevelopmentServerUrl,
-            final String openApiStagingServerUrl, final String openApiProductionServerUrl) {
+    private void writeOpenApiInfo(final StringBuilder openApiBuffer, final ConfigParameters configParameters) {
 
         openApiBuffer.append("info:\n");
         openApiBuffer.append("  title: ");
-        openApiBuffer.append(projectTitle);
+        openApiBuffer.append(configParameters.getProjectTitle());
         openApiBuffer.append("\n");
         openApiBuffer.append("  version: ");
-        openApiBuffer.append(openApiDocVersion);
+        openApiBuffer.append(configParameters.getOpenApiDocVersion());
         openApiBuffer.append("\n");
         openApiBuffer.append("  license:\n");
         openApiBuffer.append("    name: ");
-        openApiBuffer.append(openApiLicenceName);
+        openApiBuffer.append(configParameters.getOpenApiLicenceName());
         openApiBuffer.append("\nservers:\n");
-        if (openApiDevelopmentServerUrl != null) {
+        if (configParameters.getOpenApiDevelopmentServerUrl() != null) {
 
-            openApiBuffer.append("  - url: ");
-            openApiBuffer.append(openApiDevelopmentServerUrl);
+            openApiBuffer.append(YAML_URL);
+            openApiBuffer.append(configParameters.getOpenApiDevelopmentServerUrl());
             openApiBuffer.append("\n    description: Development server\n");
         }
-        if (openApiStagingServerUrl != null) {
+        if (configParameters.getOpenApiStagingServerUrl() != null) {
 
-            openApiBuffer.append("  - url: ");
-            openApiBuffer.append(openApiStagingServerUrl);
+            openApiBuffer.append(YAML_URL);
+            openApiBuffer.append(configParameters.getOpenApiStagingServerUrl());
             openApiBuffer.append("\n    description: Staging server\n");
         }
-        if (openApiProductionServerUrl != null) {
+        if (configParameters.getOpenApiProductionServerUrl() != null) {
 
-            openApiBuffer.append("  - url: ");
-            openApiBuffer.append(openApiProductionServerUrl);
+            openApiBuffer.append(YAML_URL);
+            openApiBuffer.append(configParameters.getOpenApiProductionServerUrl());
             openApiBuffer.append("\n    description: Production server\n");
         }
     }
@@ -97,10 +102,7 @@ public class OpenApiOutput {
 
         RestDocHandler.restInfo.getClassInfo().stream()
                 .filter(classInfo -> classInfo.getMethodInfo() != null)
-                .forEach(classInfo -> {
-
-                    addMethodPaths(classInfo);
-                });
+                .forEach(this::addMethodPaths);
 
         methodPaths.entrySet().stream()
                 .sorted((e1, e2) -> e1.getKey().compareTo(e2.getKey()))
@@ -159,10 +161,10 @@ public class OpenApiOutput {
                     pathContent.append("\n        '");
                     pathContent.append(methodInfo.getReturnInfo().getReturnStatusCode());
                     pathContent.append("':");
-                    pathContent.append("\n          description: ");
-                    pathContent.append(methodInfo.getReturnInfo().getReturnStatus());
+                    pathContent.append(YAML_DESCRIPTION);
+                    pathContent.append(methodInfo.getReturnInfo().getReturnStatusAsText());
 
-                    if (methodInfo.getReturnInfo().getReturnClassName().startsWith("java.util.List")) {
+                    if (methodInfo.getReturnInfo().getReturnClassName().startsWith(JAVA_LIST)) {
 
                         addPathContent(pathContent, methodInfo);
 
@@ -184,30 +186,33 @@ public class OpenApiOutput {
                                 switch (parameter.getParameterType()) {
 
                                     case "javax.ws.rs.PathParam":
-                                        if (validParameters[0] == false) {
+                                        if (!validParameters[0]) {
 
-                                            pathContent.append("\n      parameters:");
+                                            pathContent.append(YAML_PARAMETERS);
                                             validParameters[0] = true;
                                         }
                                         addParameterYaml(pathContent, "path", parameter);
                                         break;
 
                                     case "javax.ws.rs.HeaderParam":
-                                        if (validParameters[0] == false) {
+                                        if (!validParameters[0]) {
 
-                                            pathContent.append("\n      parameters:");
+                                            pathContent.append(YAML_PARAMETERS);
                                             validParameters[0] = true;
                                         }
                                         addParameterYaml(pathContent, "header", parameter);
                                         break;
 
                                     case "javax.ws.rs.QueryParam":
-                                        if (validParameters[0] == false) {
+                                        if (!validParameters[0]) {
 
-                                            pathContent.append("\n      parameters:");
+                                            pathContent.append(YAML_PARAMETERS);
                                             validParameters[0] = true;
                                         }
                                         addParameterYaml(pathContent, "query", parameter);
+                                        break;
+                                        
+                                    default:
                                         break;
                                 }
 
@@ -215,7 +220,7 @@ public class OpenApiOutput {
 
                                 if (!description.isEmpty()) {
 
-                                    pathContent.append("\n          description: ");
+                                    pathContent.append(YAML_DESCRIPTION);
                                     pathContent.append(description);
                                 }
                             });
@@ -234,7 +239,7 @@ public class OpenApiOutput {
     private void addPathContent(final StringBuilder pathContent, MethodInfo methodInfo) {
 
         pathContent.append("\n          content: ");
-        pathContent.append("\n            ");
+        pathContent.append(YAML_NEW_ROW);
         if (methodInfo.getProduceType().isEmpty()) {
 
             // Default to 'application/json'
@@ -265,13 +270,13 @@ public class OpenApiOutput {
         }
         pathContent.append("\n          schema:");
         type = mapFieldType(parameter.getParameterClassName(), null);
-        pathContent.append("\n            ");
-        if (!type.getFieldType().startsWith("$ref:")) {
+        pathContent.append(YAML_NEW_ROW);
+        if (!type.getFieldType().startsWith(YAML_REFERENCE)) {
 
             pathContent.append("type: ");
         }
         pathContent.append(type.getFieldType());
-        if (type.getFieldType().equals("array")) {
+        if (type.getFieldType().equals(YAML_ARRAY)) {
 
             pathContent.append("\n            items:");
             pathContent.append("\n              type: ");
@@ -286,7 +291,7 @@ public class OpenApiOutput {
 
             if (type.getFieldFormat() != null) {
 
-                pathContent.append("\n            format: ");
+                pathContent.append(YAML_FORMAT);
                 pathContent.append(type.getFieldFormat());
             }
         }
@@ -357,7 +362,7 @@ public class OpenApiOutput {
 
         DataModelInfo dataModelInfo = RestDocHandler.restInfo.getDomainDataMap().get(className);
 
-        if (dataModelInfo.getFields().size() > 0) {
+        if (!dataModelInfo.getFields().isEmpty()) {
 
             component.append("\n      properties:");
 
@@ -370,107 +375,104 @@ public class OpenApiOutput {
             }
         }
 
-        if (dataModelInfo != null) {
+        dataModelInfo.getFields().stream()
+                .forEach(field -> {
 
-            dataModelInfo.getFields().stream()
-                    .forEach(field -> {
+                    component.append("\n        ");
+                    component.append(field.getFieldName());
+                    component.append(":");
 
-                        component.append("\n        ");
-                        component.append(field.getFieldName());
-                        component.append(":");
+                    if (field.getFieldType().equals("error")) {
 
-                        if (field.getFieldType().equals("error")) {
+                        component.append("\n          type: object");
+                        component.append(YAML_DESCRIPTION);
+                        component.append(dataModelInfo.getInfo().replaceAll(":", ""));
 
-                            component.append("\n          type: object");
-                            component.append("\n          description: ");
-                            component.append(dataModelInfo.getInfo().replaceAll(":", ""));
+                    } else {
+
+                        if (field.getFieldType().equals("enum")) {
+
+                            component.append("\n          type: string");
+                            component.append("\n          enum: [");
+                            component.append(field.getFieldOfType());
+                            component.append("]");
 
                         } else {
 
-                            if (field.getFieldType().equals("enum")) {
+                            // The ordert is important, needs to be after error and enum
+                            if (componentName.startsWith("Set-")) {
 
-                                component.append("\n          type: string");
-                                component.append("\n          enum: [");
-                                component.append(field.getFieldOfType());
-                                component.append("]");
+                                component.append("\n          type: array");
+                                component.append("\n          items: ");
+
+                                OpenApiField openApiField = mapFieldType(field.getFieldType(), field.getFieldOfType());
+
+                                component.append("\n            type: ");
+                                component.append(openApiField.getFieldType());
+
+                                if (openApiField.getFieldFormat() != null) {
+
+                                    component.append(YAML_FORMAT);
+                                    component.append(openApiField.getFieldFormat());
+                                }
+
+                                component.append(YAML_DESCRIPTION);
+                                component.append(collectionType);
 
                             } else {
 
-                                // The ordert is important, needs to be after error and enum
-                                if (componentName.startsWith("Set-")) {
+                                component.append("\n          ");
 
-                                    component.append("\n          type: array");
-                                    component.append("\n          items: ");
+                                OpenApiField openApiField = mapFieldType(field.getFieldType(), field.getFieldOfType());
 
-                                    OpenApiField openApiField = mapFieldType(field.getFieldType(), field.getFieldOfType());
+                                if (!openApiField.getFieldType().startsWith(YAML_REFERENCE)) {
 
-                                    component.append("\n            type: ");
-                                    component.append(openApiField.getFieldType());
+                                    component.append("type: ");
+                                }
 
-                                    if (openApiField.getFieldFormat() != null) {
+                                component.append(openApiField.getFieldType());
 
-                                        component.append("\n            format: ");
-                                        component.append(openApiField.getFieldFormat());
-                                    }
+                                if (openApiField.getFieldFormat() != null) {
 
-                                    component.append("\n          description: ");
-                                    component.append(collectionType);
+                                    component.append("\n          format: ");
+                                    component.append(openApiField.getFieldFormat());
+                                }
 
-                                } else {
+                                if (openApiField.getDescription() != null) {
 
-                                    component.append("\n          ");
+                                    component.append(YAML_DESCRIPTION);
+                                    component.append(openApiField.getDescription());
+                                }
 
-                                    OpenApiField openApiField = mapFieldType(field.getFieldType(), field.getFieldOfType());
+                                if (openApiField.getFieldType().equals(YAML_ARRAY)) {
 
-                                    if (!openApiField.getFieldType().startsWith("$ref:")) {
+                                    component.append("\n          items:");
 
-                                        component.append("type: ");
-                                    }
+                                    OpenApiField openApiItemField = mapFieldType(field.getFieldOfType(), null);
 
-                                    component.append(openApiField.getFieldType());
+                                    if (!openApiItemField.getFieldType().startsWith(YAML_REFERENCE)) {
 
-                                    if (openApiField.getFieldFormat() != null) {
+                                        component.append("\n            type: ");
+                                        component.append(openApiItemField.getFieldType());
 
-                                        component.append("\n          format: ");
-                                        component.append(openApiField.getFieldFormat());
-                                    }
+                                        if (openApiItemField.getFieldFormat() != null) {
 
-                                    if (openApiField.getDescription() != null) {
-
-                                        component.append("\n          description: ");
-                                        component.append(openApiField.getDescription());
-                                    }
-
-                                    if (openApiField.getFieldType().equals("array")) {
-
-                                        component.append("\n          items:");
-
-                                        OpenApiField openApiItemField = mapFieldType(field.getFieldOfType(), null);
-
-                                        if (!openApiItemField.getFieldType().startsWith("$ref:")) {
-
-                                            component.append("\n            type: ");
-                                            component.append(openApiItemField.getFieldType());
-
-                                            if (openApiItemField.getFieldFormat() != null) {
-
-                                                component.append("\n            format: ");
-                                                component.append(openApiItemField.getFieldFormat());
-                                            }
-                                        } else {
-
-                                            // $ref: reference
-                                            component.append("\n            ");
-                                            component.append(openApiItemField.getFieldType());
+                                            component.append(YAML_FORMAT);
+                                            component.append(openApiItemField.getFieldFormat());
                                         }
+                                    } else {
+
+                                        // $ref: reference
+                                        component.append(YAML_NEW_ROW);
+                                        component.append(openApiItemField.getFieldType());
                                     }
                                 }
                             }
                         }
-                    });
+                    }
+                });
 
-            components.put(componentName, component.toString());
-        }
+        components.put(componentName, component.toString());
     }
 
     private void writeComponentsList(final StringBuilder openApiBuffer) {
@@ -516,12 +518,12 @@ public class OpenApiOutput {
                 return field;
 
             case "java.lang.String":
-                field.setFieldType("string");
+                field.setFieldType(YAML_STRING);
                 return field;
 
             case "byte":
             case "java.lang.Byte":
-                field.setFieldType("string");
+                field.setFieldType(YAML_STRING);
                 field.setFieldFormat("byte");
                 return field;
 
@@ -531,24 +533,24 @@ public class OpenApiOutput {
                 return field;
 
             case "java.util.Date":
-                field.setFieldType("string");
+                field.setFieldType(YAML_STRING);
                 field.setFieldFormat("date");
                 return field;
 
-            case "java.util.List":
-                field.setFieldType("array");
+            case JAVA_LIST:
+                field.setFieldType(YAML_ARRAY);
                 return field;
 
             case "java.net.URI":
-                field.setFieldType("string");
+                field.setFieldType(YAML_STRING);
                 field.setFieldFormat("uri");
                 field.setDescription(javaField);
                 return field;
 
             default:
-                if (javaField.startsWith("java.util.List")) {
+                if (javaField.startsWith(JAVA_LIST)) {
 
-                    field.setFieldType("array");
+                    field.setFieldType(YAML_ARRAY);
                     return field;
 
                 } else if (javaField.endsWith("Map")) {
@@ -720,7 +722,7 @@ public class OpenApiOutput {
 
             if (parameterNameIndex != -1) {
 
-                int endDescriptionIndex = javaDocLowerCase.indexOf("*", parameterNameIndex);
+                int endDescriptionIndex = javaDocLowerCase.indexOf('*', parameterNameIndex);
 
                 if (endDescriptionIndex != -1) {
 
@@ -741,7 +743,7 @@ public class OpenApiOutput {
 
     private void writeOpenApiToFile(final File outputDirectory, final StringBuilder openApiBuffer, final String projectTitle) {
 
-        Path openApiPath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + "/" + projectTitle.replaceAll("(\\s+|\"+)", "_") + ".yaml"));
+        Path openApiPath = Paths.get(URI.create("file://" + outputDirectory.getAbsolutePath() + PATH_DELIMITER + projectTitle.replaceAll("(\\s+|\"+)", "_") + ".yaml"));
 
         try {
 
