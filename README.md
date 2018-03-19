@@ -46,6 +46,10 @@ Put below configurations in your pom.xml, and modify the paths for your needs.
 </plugin>
 ```
 
+## Show a yaml file
+
+You can use swagger-ui to show the content in the yaml file created with this maven plugin.
+
 ## 'Rest Doc' Annotation types
 
 The 'Rest Doc' recognizes 2 types of special annotations DocReturnType and DocListType.
