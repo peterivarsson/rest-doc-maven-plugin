@@ -38,7 +38,8 @@ Put below configurations in your pom.xml, and modify the paths for your needs.
 
     <executions>
         <execution>
-            <goals>
+           <phase>test</phase>
+           <goals>
                 <goal>restdoc</goal>
             </goals>
         </execution>
