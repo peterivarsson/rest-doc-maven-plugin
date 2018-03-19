@@ -130,6 +130,13 @@ public class RESTDocMojo extends AbstractMojo {
 
         getLog().info("\nRESTDocMojo maven plugin STARTED executing\n");
 
+        getLog().info("classesDirectory = " + classesDirectory);
+        getLog().info("sourcesDirectory = " + sourcesDirectory);
+        getLog().info("outputDirectory = " + outputDirectory);
+        getLog().info("loggingDirectory = " + loggingDirectory);
+        getLog().info("projectTitle = " + projectTitle);
+        getLog().info("outputType = " + outputType + "\n");
+
         // avoid execution if classes directory does not exist
         if (!isConfigParameterSet(classesDirectory)) {
 

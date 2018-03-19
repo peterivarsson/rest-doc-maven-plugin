@@ -20,15 +20,15 @@ Put below configurations in your pom.xml, and modify the paths for your needs.
     <version>1.0</version>
     <configuration>
         <!-- Specify the RESTDoc parameters -->
-        <classesDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-test-mobilebackend-api/target/classes</classesDirectory>
-        <sourcesDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-test-mobilebackend-api/src/main/java</sourcesDirectory>
-        <outputDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-output-directory</outputDirectory>
-        <loggingDirectory>/Users/piv/Documents/NetBeansProjects/rest-doc-logging-directory</loggingDirectory>
-        <projectTitle>Mobile backend</projectTitle>
-        <!-- outputType html or openapi -->
-        <outputType>html</outputType>
-        <!-- Mandatory openapi configuration parameters, if openapi output is chosen above -->
-           <openApiDocVersion>1.0.0</openApiDocVersion>
+           <classesDirectory>${project.build.outputDirectory}</classesDirectory>
+           <sourcesDirectory>${project.build.directory}/../src/main/java</sourcesDirectory>
+           <outputDirectory>${project.build.directory}</outputDirectory>
+           <loggingDirectory>${project.build.directory}</loggingDirectory>
+           <projectTitle>${project.name}</projectTitle>
+           <!-- outputType html or openapi -->
+           <outputType>openapi</outputType>
+           <!-- Mandatory openapi configuration parameters, if openapi output is chosen above -->
+           <openApiDocVersion>${project.version}</openApiDocVersion>
            <openApiLicenceName>Apache 2.0</openApiLicenceName>
            <!-- openapi at least one of the servers below is needed to be defined -->
            <openApiDevelopmentServerUrl>https://test.cybercom.com/services</openApiDevelopmentServerUrl>
